@@ -1,0 +1,388 @@
+---
+title: "House Selling Prices"
+author: "Jackson Dial"
+date: "6/24/2020"
+output:
+  html_document:
+    keep_md: TRUE
+    theme: cerulean
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r message=FALSE, warning=FALSE}
+library(readr)
+library(mosaic)
+library(car)
+library(tidyverse)
+library(plotly)
+library(reshape2)
+library(pander)
+```
+
+## Model Creation
+
+### Data Manipulation
+
+```{r message=FALSE, warning=FALSE}
+# Data Manipulation/Wrangling
+
+houses <- read.csv("train.csv", header=TRUE)
+
+houses$totalsqft <- houses$X1stFlrSF + houses$X2ndFlrSF  + houses$TotalBsmtSF + houses$GarageArea
+
+
+
+houses <- houses %>% 
+  mutate(hoodwealth = case_when(
+         Neighborhood == "BrDale" | Neighborhood == "IDDTRR" | Neighborhood == "OldTown" | Neighborhood == "SWISU" | Neighborhood == "IDOTRR" ~ "Lower Class",
+         Neighborhood == "Veenker" | Neighborhood == "Somerst" | Neighborhood == "Gilbert" | Neighborhood == "Crawfor" | Neighborhood == "Timber" | Neighborhood == "CollgCr" | Neighborhood == "ClearCr" | Neighborhood == "NoRidge" | Neighborhood == "NridgHt"  | Neighborhood == "StoneBr" ~ "Upper Class",
+          TRUE ~ "Middle Class"))
+
+houses <- houses %>% 
+  filter(totalsqft < 8000)
+
+houses$hoodwealth <- factor(houses$hoodwealth)
+
+houses <- houses %>% 
+  mutate(qualGroup = case_when(
+    OverallQual == "1" | OverallQual == "2" | OverallQual == "3" | OverallQual == "4" | OverallQual == "5" ~ "poor",
+    OverallQual == "7" | OverallQual == "8" | OverallQual == "9" | OverallQual == "10"  | OverallQual == "6" ~ "good"))
+
+houses$qualGroup <- factor(houses$qualGroup)
+#houses <- houses %>% 
+# select(c(totalsqft, SalePrice, Neighborhood, YearBuilt, hoodwealth, qualGroup, OverallQual))
+
+plot(SalePrice ~ totalsqft, data = houses)
+
+#[1] "GarageType"   "GarageYrBlt"  "GarageFinish" "GarageCars"   "GarageArea"   "GarageQual"   "GarageCond"  
+
+```
+
+This section was created and edited throughout the process of creating the regression model. The first variable that was created was the total square foot column. This was made by adding the square footage of the first floor, second floor, basement, and garage together. Given that the first three rules of real estate are location, the neighborhood was taken into consideration. 3 groups were created, based on the residuals of each of the included neighborhood compared to a regression model only including the total square footage as the explanatory variable. This is shown below:
+
+### Initial Models and Plots
+
+```{r}
+mylm <- lm(SalePrice ~ totalsqft, data = houses)
+
+plot(mylm$residuals ~ as.factor(Neighborhood), data = houses)
+abline(h=0)
+```
+
+Any neighborhoods that were shown to have mainly positive residuals were placed in a group called upper class, those with mostly negative residuals were classified as lower class, and the others were labeled middle class. This new factor column with 3 levels was then added to the regression model, creating a 3-lines quadratic model, given that a quadratic term was also introduced to see if it provided a better fit.
+
+```{r message=FALSE, warning=FALSE}
+house.lm1 <- lm(SalePrice ~ totalsqft + I(totalsqft^2) + hoodwealth, data = houses)
+summary(house.lm1)
+
+#house.lm1 <- lm(SalePrice ~ totalsqft + I(totalsqft^2) + LotArea, data = houses)
+#summary(house.lm1)
+```
+
+## Try a 3-Dimensional Model
+
+A few different approaches were used, including adding an interaction, an interaction with the quadratic term, and adding a second continuous variable, but it was decided to just keep the interactions and quadratics at this point.
+
+```{r message=FALSE, warning=FALSE, echo = FALSE}
+house.lm2 <- lm(SalePrice ~ totalsqft + hoodwealth + totalsqft:hoodwealth, data = houses)
+summary(house.lm2)
+```
+
+At this point, I wanted to make sure I was keeping up with the changes being made and thus created a plot of my current regression model:
+
+```{r}
+house.lm3 <- lm(SalePrice ~ totalsqft + hoodwealth + totalsqft:hoodwealth + I(totalsqft^2) + hoodwealth:I(totalsqft^2), data = houses)
+summary(house.lm3)
+b <- coef(house.lm3)
+plot(SalePrice ~ totalsqft, col = as.factor(hoodwealth), data = houses, pch = 19)
+curve(b[1] + b[2]*totalsqft + b[5]*I(totalsqft^2), add = TRUE, xname = "totalsqft")
+curve(b[1] + b[2]*totalsqft + b[5]*I(totalsqft^2) + 
+      b[3] + b[6]*totalsqft + b[8]*I(totalsqft^2), add = TRUE, xname = "totalsqft", col = "red")
+curve(b[1] + b[2]*totalsqft + b[5]*I(totalsqft^2) + 
+      b[3] + b[6]*totalsqft + b[8]*I(totalsqft^2) + 
+      b[4] + b[7]*totalsqft + b[9]*I(totalsqft^2)  , add = TRUE, xname = "totalsqft", col = "green3")
+
+#plot(house.lm3$residuals ~ YearBuilt, data = houses)
+#house.lm4 <- lm(SalePrice ~ I(totalsqft^2) + hoodwealth + totalsqft:hoodwealth + hoodwealth:I(totalsqft^2) + houses$YearBuilt, data = houses)
+#summary(house.lm4)
+
+#plot(house.lm3$residuals ~ ., data = houses)
+```
+
+
+
+```{r message=FALSE, warning=FALSE, include = FALSE}
+table(houses$hoodwealth)
+
+house.lm5 <- lm(SalePrice ~ I(totalsqft^2) + hoodwealth + totalsqft:hoodwealth + hoodwealth:I(totalsqft^2)  + OverallQual + totalsqft:OverallQual, data = houses)
+summary(house.lm5)
+plot(SalePrice ~ totalsqft, col = interaction(hoodwealth,OverallQual), data = houses)
+with(houses, levels(interaction(hoodwealth,OverallQual)))
+
+
+plot(house.lm3$residuals ~ OverallQual, data = houses)
+lines(lowess(houses$OverallQual,house.lm3$residuals))
+
+house.lm6 <- lm(SalePrice ~  I(totalsqft^2) + hoodwealth + totalsqft:hoodwealth + hoodwealth:I(totalsqft^2) + qualGroup + totalsqft:qualGroup, data = houses)
+summary(house.lm6)
+
+boxCox(house.lm6)
+
+house.lm61 <- lm(sqrt(sqrt(SalePrice)) ~  I(totalsqft^2) + hoodwealth + totalsqft:hoodwealth + hoodwealth:I(totalsqft^2) + qualGroup + totalsqft:qualGroup + YearBuilt, data = houses)
+summary(house.lm6)
+
+with(houses, levels(interaction(hoodwealth,qualGroup)))
+plot(SalePrice ~ totalsqft, col = interaction(hoodwealth,qualGroup), data = houses)
+plot(SalePrice ~ totalsqft, col = as.factor(hoodwealth), data = houses)
+
+plot(SalePrice ~ hoodwealth, data = houses)
+plot(SalePrice ~ as.factor(Neighborhood), data = houses)
+plot(house.lm6$residuals ~ as.factor(Neighborhood), data = houses)
+plot(house.lm6,which=1)
+qqPlot(house.lm6$residuals)
+plot(house.lm6$residuals)
+
+house.lm7 <- lm(sqrt(sqrt(SalePrice)) ~  I(totalsqft^2)  + qualGroup + totalsqft:qualGroup + qualGroup:I(totalsqft^2) + YearBuilt, data = houses)
+summary(house.lm7)
+
+plot(house.lm7,which=1)
+qqPlot(house.lm7$residuals)
+plot(house.lm7$residuals)
+houses$qualGroup <- factor(houses$qualGroup)
+plot(house.lm7$residuals ~ qualGroup, data = houses)
+plot(SalePrice ~ qualGroup, data = houses)
+plot(SalePrice ~ OverallQual, data = houses)
+lines(lowess(houses$OverallQual,houses$SalePrice))
+
+house.lm8a <- lm(SalePrice ~  totalsqft + I(totalsqft^2)  + qualGroup  + qualGroup:I(totalsqft^2) + YearBuilt, data = houses)
+summary(house.lm8a)
+
+house.lm8b <- lm(sqrt(sqrt(SalePrice)) ~ I(totalsqft^2)  + qualGroup  + qualGroup:I(totalsqft^2) + YearBuilt, data = houses)
+summary(house.lm8b)
+
+house.lm8c <- lm(SalePrice ~ I(totalsqft^2)  + qualGroup  + qualGroup:I(totalsqft^2) + YearBuilt, data = houses)
+summary(house.lm8c)
+
+house.lm8d <- lm(sqrt(sqrt(SalePrice)) ~ totalsqft   + qualGroup + totalsqft:qualGroup  + YearBuilt, data = houses)
+summary(house.lm8d)
+
+pairs( houses[,c("SalePrice", "totalsqft", "qualGroup", "YearBuilt")])
+plot(sqrt(sqrt(SalePrice)) ~ totalsqft   + qualGroup   + YearBuilt, data = houses)
+
+grep("Gar",names(houses),value=TRUE)
+
+table(houses$ExterQual)
+plot(house.lm8d$residuals ~ as.factor(ExterQual), data = houses)
+```
+
+Eventually, another new variable was created using the overall quality rating of the house. The original dataset was on a 1-10 scale, but was used to create a binary variable, which defined a rating of 1-5 as poor, and a rating of 6-10 as good. Once this was incorporated into the model, the previously used variable regarding the neighborhood was deemed insignificant due to the summary output of the model, and the fact that the adjusted $R^2$ value was not significantly negatively affected.
+
+After creating about 8 different models using variables such as the Year Built, garage size, exterior quality and various transformations, a final model was selected. Only a few of the models have been shown here due to the length and breadth, but can be shown if desired.
+
+```{r}
+#One last try
+#plot(house.lm8d$residuals ~ ., data = houses)
+house.lm9 <- lm(sqrt(sqrt(SalePrice)) ~ totalsqft   + qualGroup + totalsqft:qualGroup + ExterQual + YearBuilt, data = houses)
+summary(house.lm9)
+
+
+house.lm10 <- lm(sqrt(sqrt(SalePrice)) ~ totalsqft + qualGroup + totalsqft:qualGroup + YearBuilt, data = houses)
+summary(house.lm10)
+```
+
+### Final Regression Model
+
+The Final regression model includes a $1/4$ power transformation on the Y value of Sale Price, predicted on two continuous variables, total square foot and year built, as well as the binary variable of quality and the interaction of that variable with total square foot, with all variables being significant:
+
+
+```{r message=FALSE, warning=FALSE}
+
+final.lm <- lm(sqrt(sqrt(SalePrice)) ~ totalsqft + qualGroup + totalsqft:qualGroup +  YearBuilt , data = houses)
+summary(final.lm) %>% pander(caption = "Final Regression Model")
+
+graph_resoy <- 1
+graph_resox <- 500
+
+axis_x <- seq(min(houses$totalsqft), max(houses$totalsqft), by = graph_resox)
+axis_y <- seq(min(houses$YearBuilt), max(houses$YearBuilt), by = graph_resoy)
+
+house_surface <- expand.grid(totalsqft = axis_x, YearBuilt = axis_y, KEEP.OUT.ATTRS=F)
+tmp <- house_surface
+tmp$qualGroup <- as.factor("good")
+house_surface$Z <- predict.lm(final.lm, newdata = tmp)^4
+house_surface <- acast(house_surface, YearBuilt ~ totalsqft, value.var = "Z") #y ~ x
+
+house_surface2 <- expand.grid(totalsqft = axis_x, YearBuilt = axis_y, KEEP.OUT.ATTRS=F)
+tmp <- house_surface2
+tmp$qualGroup <- as.factor("poor")
+house_surface2$Z <- predict.lm(final.lm, newdata = tmp)^4
+house_surface2 <- acast(house_surface2, YearBuilt ~ totalsqft, value.var = "Z") #y ~ x
+
+myplot <- plot_ly(houses, 
+        x = ~totalsqft, 
+        y = ~YearBuilt, 
+        z = ~SalePrice,
+        text = rownames(houses), 
+        type = "scatter3d", 
+        mode = "markers",
+        color = ~ qualGroup) 
+myplot <- myplot %>%
+  add_trace(z = house_surface,
+            x = axis_x,
+            y = axis_y,
+            type = "surface") 
+myplot <- myplot %>% 
+  add_trace(z = house_surface2,
+            x = axis_x,
+            y = axis_y,
+            type = "surface",
+            showlegend = FALSE)
+myplot
+```
+
+#### Diagnostic Plots
+
+```{r}
+par(mfrow=c(1,3))
+plot(final.lm, which = 1)
+qqPlot(final.lm$residuals)
+plot(final.lm$residuals)
+par(mfrow=c(1,2))
+plot(final.lm, which = c(4,5))
+```
+
+Considering these diagnostic plots, we can see that there may be some other variable that is affecting the Sale Price due to the lack of complete linearity in the model, and the QQ Plot shows that the residuals are not normally distributed, though they show much improvement using the $1/4$ power transformation over the non-transformed Sale Price.
+
+Point 186 does also appear to possibly be an outlier, but considering its Cook's Distance and leverage, we do not consider it an outlier.
+
+## Validation
+
+```{r message=FALSE, warning=FALSE}
+set.seed(121)
+
+num_rows <- 1000 #1460 total
+keep <- sample(1:nrow(houses), num_rows)
+
+mytrain <- houses[keep, ] #Use this in the lm(..., data=mytrain)
+
+mytest <- houses[-keep, ] #Use this in the predict(..., newdata=mytest)
+```
+
+```{r}
+final.lm <- lm(sqrt(sqrt(SalePrice)) ~ totalsqft + qualGroup + totalsqft:qualGroup + YearBuilt, data = mytrain)
+yhattest <- predict(final.lm, newdata = mytest)^4
+ybartest <- mean(mytest$SalePrice)
+
+SSTO <- sum( (mytest$SalePrice - ybartest)^2)
+SSE <- sum( (mytest$SalePrice - yhattest)^2)
+rsq <- 1-SSE/SSTO
+
+n <- length(mytest$SalePrice)
+p <- length(coef(final.lm))
+adrsq <- 1 - (n-1)/(n-p)*SSE/SSTO
+
+```
+
+```{r}
+  my_output_table2 <- data.frame(Model = "True Regression Model", `Original R2` = summary(final.lm)$r.squared, `Orig. Adj. R-squared` = summary(final.lm)$adj.r.squared, `Validation R-squared` = rsq, `Validation Adj. R^2` = adrsq)
+
+colnames(my_output_table2) <- c("Model", "Original $R^2$", "Original Adj. $R^2$", "Validation $R^2$", "Validation Adj. $R^2$")
+
+knitr::kable(my_output_table2, escape=TRUE, digits=4)
+```
+
+
+
+## Interpretation {.tabset .tabset-fade}
+
+The final model being a two-plane model makes interpretation a bit tricky, but definitely doable. It is also called a double contour plot, due to the fact that the interaction of the total square footage and the quality group has been allowed. A few interpretations are given below:
+
+An increase of 1 square foot gives an increase of $0.001724$ square root square root dollars in the sale price, with all other variables being held constant.
+
+An increase of 1 in the year built variable, or a house being 1 year younger, gives an increase in the sale price of $0.01446$ square root square root dollars, all other variables being held constant.
+
+A change from the quality group of poor to good impacts the effect of total square footage, meaning that if the quality group is poor, a 1 square foot increase in a house produces an increase of only $0.0011891$ square root square root dollars, as opposed to the increase of $0.001724$ square root square root dollars when the quality group is good.
+
+An increase of 1 unit for both the total square foot variable and the year built variable gives an increase of $0.016184$ square root square root dollars, assuming the quality group is good. If it is poor, then the increase of both the same variables by 1 unit increases the sale price of the house by only $0.0156491$ square root square root dollars.
+
+Predictions and prediction intervals have been included below to demonstrate the changes that are made by one variable at a time:
+
+### Total Square Foot
+
+```{r}
+predict(final.lm, data.frame(totalsqft = 1200, qualGroup = "poor", YearBuilt = 2000), interval = "prediction")^4 %>% pander(caption = "Total Square Footage = 1200")
+```
+
+```{r}
+predict(final.lm, data.frame(totalsqft = 1300, qualGroup = "poor", YearBuilt = 2000), interval = "prediction")^4 %>% pander(caption = "Total Square Footage = 1300")
+```
+
+```{r}
+predict(final.lm, data.frame(totalsqft = 1400, qualGroup = "poor", YearBuilt = 2000), interval = "prediction")^4 %>% pander(caption = "Total Square Footage = 1400")
+```
+
+```{r}
+predict(final.lm, data.frame(totalsqft = 1500, qualGroup = "poor", YearBuilt = 2000), interval = "prediction")^4 %>% pander(caption = "Total Square Footage = 1500")
+```
+
+
+
+### Year Built
+
+
+```{r}
+predict(final.lm, data.frame(totalsqft = 2000, qualGroup = "poor", YearBuilt = 1990), interval = "prediction")^4 %>% pander(caption = "Year Built = 1990")
+```
+
+```{r}
+predict(final.lm, data.frame(totalsqft = 2000, qualGroup = "poor", YearBuilt = 1995), interval = "prediction")^4 %>% pander(caption = "Year Built = 1995")
+```
+
+```{r}
+predict(final.lm, data.frame(totalsqft = 2000, qualGroup = "poor", YearBuilt = 2000), interval = "prediction")^4 %>% pander(caption = "Year Built = 2000")
+```
+
+```{r}
+predict(final.lm, data.frame(totalsqft = 2000, qualGroup = "poor", YearBuilt = 2005), interval = "prediction")^4 %>% pander(caption = "Year Built = 2005")
+```
+
+
+### Quality Group "Good"
+
+```{r}
+predict(final.lm, data.frame(totalsqft = 2000, qualGroup = "poor", YearBuilt = 2000), interval = "prediction")^4 %>% pander(caption = "Quality = Poor")
+```
+
+```{r}
+predict(final.lm, data.frame(totalsqft = 2000, qualGroup = "good", YearBuilt = 2000), interval = "prediction")^4 %>% pander(caption = "Quality = Good")
+```
+
+
+```{r}
+predict(final.lm, data.frame(totalsqft = 2500, qualGroup = "poor", YearBuilt = 2005), interval = "prediction")^4 %>% pander(caption = "Quality = Poor")
+```
+
+```{r}
+predict(final.lm, data.frame(totalsqft = 2500, qualGroup = "good", YearBuilt = 2005), interval = "prediction")^4 %>% pander(caption = "Quality = Good")
+```
+
+
+##
+
+Due to these interpretations and predictions, we can conclude that the Year Built variable has the greatest effect on the Sale price of a home. This also makes sense, because a one unit change in year, meaning a home is an entire year younger, is a lot more logically significant than a single unit increase in square footage when considering the selling price of a house.
+
+```{r include = FALSE}
+#par(mfrow=c(2,2), mai=c(1,1,1,1))
+
+#plot(final.lm, which=c(1,4))
+
+#robust.lm <- rlm(sqrt(sqrt(SalePrice)) ~ totalsqft + qualGroup + totalsqft:qualGroup + YearBuilt, data = mytrain)
+
+#plot(robust.lm, which=c(1,4))
+
+#par(mfrow=c(1,1))
+
+#plot(robust.lm, which = 5)
+```

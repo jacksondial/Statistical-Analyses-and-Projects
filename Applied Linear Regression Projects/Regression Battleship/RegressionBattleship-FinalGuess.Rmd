@@ -1,0 +1,167 @@
+---
+title: "Regression Battleship - Final Guess"
+author: "Jackson Dial"
+output: 
+  html_document:
+    theme: cerulean
+    toc: true
+    toc_float: true
+    code_folding: hide
+---
+ 
+```{r, include = FALSE}
+library(pander)
+# Read in the RBdata here:
+rbdata <- read.csv("saunders_Spring20_RBdata.csv", header=TRUE)
+
+pairs(rbdata, panel=panel.smooth)
+
+pairs(rbdata, panel=panel.smooth, col = as.factor(rbdata$X1))
+plot(Y ~ X3, col = as.factor(X1), data = rbdata)
+
+lm.1 <- lm(Y ~ X3 + X1 + X3:X1, data = rbdata)
+summary(lm.1)
+
+pairs( cbind(Res = lm.1$residuals, Fit = lm.1$fit, rbdata), panel=panel.smooth, col = interaction(rbdata$X1,rbdata$X7))
+
+lm.2 <- lm(Y ~ X3 + X1 + X3:X1 + X7 + X1:X7, data = rbdata)
+summary(lm.2)
+plot(Y ~ X3, col = interaction(X1,X7), data = rbdata)
+pairs( cbind(Res = lm.2$residuals, Fit = lm.2$fit, rbdata), panel=panel.smooth)
+
+lm.3 <- lm(Y ~ X3 + X1 + X3:X1 + X7 + X1:X7:X8, data = rbdata)
+plot(Y ~ X3, col = interaction(X1,X7,X8), data = rbdata, pch = 19)
+summary(lm.3)
+pairs( cbind(Res = lm.3$residuals, Fit = lm.3$fit, rbdata), panel=panel.smooth)
+
+lm.4 <- lm(Y ~ X3 + X1 + X3:X1 + X7 + X7:X3 + X10 + X10:X3, data = rbdata)
+plot(Y ~ X3, col = interaction(X1,X7,X8,X10), data = rbdata, pch = 19)
+summary(lm.4)
+pairs( cbind(Res = lm.4$residuals, Fit = lm.4$fit, rbdata), panel=panel.smooth)
+
+lm.5 <- lm(Y ~ X3 + I(X3^2) + X1 + X3:X1 + X7 + X7:X3 + X10 + X10:X3, data = rbdata)
+summary(lm.5)
+pairs( cbind(Res = lm.5$residuals, Fit = lm.5$fit, rbdata), panel=panel.smooth)
+
+lm.6 <- lm(Y ~ X3 + I(X3^2) + X1 + X3:X1 + X7 + X7:X3 + X10 + X10:X3 + X8 + X8:X3, data = rbdata)
+summary(lm.6)
+pairs( cbind(Res = lm.6$residuals, Fit = lm.6$fit, rbdata), panel=panel.smooth)
+
+lm.7 <- lm(Y ~ X3 + I(X3^2) + X1 + X3:X1 + X7 + X7:X3 + X10 + X10:X3 + X10:I(X3^2) + X8 + X8:X3, data = rbdata)
+summary(lm.7)
+pairs( cbind(Res = lm.7$residuals, Fit = lm.7$fit, rbdata), panel=panel.smooth)
+plot(Y ~ X3^2, data = rbdata, col = interaction(X1,X7,X10,X8))
+
+lm.8 <- lm(Y ~ X3 + X1 + X3:X1 + X7 + X7:X3 +X7:I(X3^2) + X10 + X10:X3 + X10:I(X3^2) + X8 + X8:X3 + X8:I(X3^2), data = rbdata)
+summary(lm.8)
+pairs( cbind(Res = lm.8$residuals, Fit = lm.8$fit, rbdata), panel=panel.smooth)
+plot(Y ~ X3^2, data = rbdata, col = interaction(X1,X7,X10,X8))
+
+```
+
+## The Model of your Guess
+
+<!-- Enter your guessed model in the math notation below. -->
+
+$$
+  Y_i = \beta_0 + \beta_1X_{3i} + \beta_2X_{1i} +\beta_3X_{1i}X_{3i} + \beta_4X_{7i} + \beta_5X_{7i}X_{3i} + \beta_6X_{7i}X_{31}^2 + \beta_7X_{10i} + \beta_8X_{10i}X_{3i} + \beta_9X_{10i}X_{31}^2 + \beta_10X_{8i} + \beta_11X_{8i}X_{3i} + \beta_12X_{8i}X_{31}^2 + \epsilon_i
+$$
+
+## The lm(...) of your Guess
+
+<!-- Provide your estimates of each model coefficient along with the Adjusted R-squared of your model:-->
+
+```{r}
+## Input your lm(Y ~ ... ,data=rbdata)
+final.lm <- lm(Y ~ X3 + X1 + X3:X1 + X7 + X7:X3 +X7:I(X3^2) + X10 + X10:X3 + X10:I(X3^2) + X8 + X8:X3 + X8:I(X3^2), data = rbdata) #replace the "1" with your model
+```
+
+```{r}
+###################################################################
+#Don't edit this part:
+pander(summary(final.lm)$coefficients)
+```
+
+**Adjusted R-squared**: `r summary(final.lm)$adj.r.squared`
+
+
+## The Plot of your Guess
+
+```{r}
+# Draw a picture of your guess at the model here:
+# Remember, your guess only counts for credit if you plot it.
+
+plot(Y ~ X3, col = interaction(X1,X7,X10,X8, drop = TRUE), data = rbdata, pch = 19)
+#points(final.lm$fit ~ X3, col = interaction(X1,X7,X10,X8, drop = TRUE), data = rbdata, pch = 19, cex = .5)
+#X1 X7 X10 X8
+#0  0  0   0  black
+#1  0  0   0  red
+#1  1  0   0  green3
+#0  0  1   0  blue
+#1  0  0   1  cyan
+
+b <- coef(final.lm)
+
+X1 = 0
+X7 = 0
+X10 = 0
+X8 = 0
+curve(b[1] + b[2]*X3 + #baseline (black)
+      b[3]*X1 + b[7]*X3*X1 + #second line (red)
+      b[4]*X7 + b[8]*X1*X7*X3 #third line (green3)
+      , add = TRUE, xname = "X3")
+
+X1 = 1
+X7 = 0
+X10 = 0
+X8 = 0
+curve(b[1] + b[2]*X3 + #baseline (black)
+      b[3]*X1 + b[7]*X3*X1 + #second line (red)
+      b[4]*X1*X7 + b[8]*X1*X7*X3  #third line (green3)
+      , add = TRUE, xname = "X3", col = "red")
+
+
+X1 = 1
+X7 = 1
+X10 = 0
+X8 = 0
+curve(b[1] + b[2]*X3 + #baseline (black)
+      b[3]*X1 + b[7]*X3*X1 + #second line (red)
+      b[4]*X7 + b[8]*X7*X3 + b[9]*X3^2  #third line (green3)
+      , add = TRUE, xname = "X3", col = "green3")
+
+
+X1 = 0
+X7 = 0
+X10 = 1
+X8 = 0
+curve(b[1] + b[2]*X3 + #baseline (black)
+      b[3]*X1 + b[7]*X3*X1 + #second line (red)
+      b[4]*X7 + b[8]*X7*X3 + b[9]*X7*X3^2 + #third line (green3)
+      b[5]*X10 + b[10]*X10*X3 + b[11]*X10*X3^2 #fourth line (blue)
+      , add = TRUE, xname = "X3", col = "blue")
+
+X1 = 1
+X7 = 0
+X10 = 0
+X8 = 1
+curve(b[1] + b[2]*X3 + #baseline (black)
+      b[3]*X1 + b[7]*X3*X1 + #second line (red)
+      b[4]*X7 + b[8]*X7*X3 + b[9]*X7*X3^2 + #third line (green3)
+      b[5]*X10 + b[10]*X10*X3 + b[11]*X10*X3^2 + #fourth line (blue)
+      b[6]*X8 + b[12]*X8*X3 + b[13]*X8*X3^2
+      , add = TRUE, xname = "X3", col = "cyan")
+```
+
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 

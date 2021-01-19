@@ -1,0 +1,152 @@
+---
+title: "Regression Battleship - Creating your Data"
+author: "Your Name Here"
+output: 
+  html_document:
+    theme: cerulean
+    code_folding: hide
+---
+
+```{r message=FALSE, warning=FALSE}
+library(pander)
+library(tidyverse)
+```
+
+## Creating your Data
+
+You need to design a "true linear regression model" of the form $Y_i = \beta_0 + \ldots + \epsilon_i$ where $\epsilon_i \sim N(0, \sigma^2)$. Then, using simulation in R, use your model to obtain a "sample" of data which must be saved in a csv file called `rbdata.csv`.
+
+### Rules
+
+1. Your csv file `rbdata.csv` must contain 11 columns of data.
+    * The first column must be your (1) Y-variable (labeled as `Y`).
+    * The other ten columns must be (10) X-variables (labeled as `X1`, `X2`, ... , `X10`). Please use all capital letters.
+    
+2. Your Y-variable (or some transformation of the Y-variable) must have been created from a linear regression model using only X-variables (or transformations of those X-variables) from within your data set.
+    * Be very careful with transformations. You must ensure that you do not break the rules of a linear regression if you choose to use transformations.
+    * If you choose transformations, only these functions are allowed when transforming X and Y variables: `1/Y^2`, `1/Y`, `log(Y)`, `sqrt(Y)`, `sqrt(sqrt(Y))`, `Y^2`, `Y^3`, `1/X^2`, `1/X`, `log(X)`, `sqrt(X)`, `sqrt(sqrt(X))`, `X^2`, `X^3`, `X^4`, and `X^5`. Don't forget to check Rule #3 carefully if you choose transformations.
+    
+3. Your sample size must be sufficiently large so that when the true model is fit to your data using lm(...), all p-values of X-variable terms (not including the intercept) found in the summary(...) are significant.
+
+4. The $R^2$ value of your true model fit on your `rbdata` sample must be greater than or equal to $0.30$.
+
+5. Your final model must be 2D drawable.
+
+## Your True Model
+
+### The Desmos Graph
+
+Include a picture of your Desmos graph showing your true model.
+
+<!--![](NameofYourDesmosPicture.png) -->
+
+
+### The Mathematical Model
+
+Write out your "true" model in mathematical form. Make sure it matches your code.
+
+$$
+  \text{EXAMPLE:} \ Y_i = \beta_0 + \beta_1 X_{4i} + \beta_2 X_{2i} + \beta_3 X_{4i} X_{2i} + \epsilon_i
+$$
+
+
+### The Code to Make the Data
+
+```{r}
+set.seed(122) #This ensures the randomness is the "same" everytime if you play the entire R-chunk as one entire piece of code. If you run lines separately, your data might not come out the same every time. You can pick any integer value you want for set.seed. Each choice produces a different sample, so you might want to play around with a few different choices.
+
+## To begin, decide on your sample size. (You may have to revise it later to ensure all values in your lm(...) are significant.)
+  
+ n <- 50
+  
+## Then, create 10 X-variables using functions like rnorm(n, mean, sd), rchisq(n, df), rf(n, df1, df2), rt(n, df), rbeta(n, a, b), runif(n, a, b) or sample(c(1,0), n, replace=TRUE)... to see what any of these functions do, run codes like hist(rchisq(n, 3)). These functions are simply allowing you to get a random sample of x-values.
+
+ X1 <- runif(n, 0 ,3) #replace this
+ X2 <- sample(c(1,0), n, replace=TRUE) #dummy variable
+ X3 <- runif(n, 20,300) #replace this
+ X4 <- sample(c(1,0), n, replace=TRUE) #use this
+ X5 <- sample(c(1,0), n, replace=TRUE)
+ X6 <- rnorm(n,22,4(0,n) #replace this
+ 
+ X7 <- runif(n, 0,3) #true x axis variable
+ 
+ X8 <- sample(c(1,0), n, replace=TRUE)#Use this
+ X9 <- runif(n,-20,20) #replace this
+ X10 <- runif(n,25,32) #replace this
+ 
+## Then, create betas, sigma, normal error terms and Y
+ 
+beta0 <- -21
+beta1 <- 6
+beta2 <- 2
+beta3 <- 22/3
+beta4 <- 23
+beta5 <- -17/3
+
+ #...
+ 
+ sigma <- 1.72 #change to whatever positive number you want
+ 
+
+ ################################
+ # You CANNOT change this part:
+ epsilon_i <- rnorm(n, 0, sigma)
+ ################################ 
+ 
+ #An example of how to make Y...
+ # Y <-  beta0 + beta1*X1 + beta2*X2 + beta3*X4*X2 + epsilon_i
+ 
+ Y <- beta0 + beta1*X7 + 
+        beta2*X2 + beta3*X7*X2 + #dashed red 
+        beta4*X4 + beta5*X7*X4 +
+        epsilon_i
+
+#...edit this code and replace it with your model
+ 
+ # You can include Y' or X' instead of Y or X if you wish.
+ # Remember, only these functions are allowed when transforming
+ # variables: 1/Y^2, 1/Y, log(Y), sqrt(Y), sqrt(sqrt(Y)), Y^2, Y^3, 1/X^2, 1/X, log(X), sqrt(X), sqrt(sqrt(X)), X^2, X^3, X^4, X^5. 
+ #########################################################
+ # ILLEGAL: Y = (beta0 + beta1*X5)^2 + epsilon_i #########
+ #########################################################
+ # Legal: sqrt(Y) = beta0 + beta1*X5^2 + epsilon_i #######
+ #########################################################
+ # You can only transform individual terms, not groups of terms.
+ # And the beta's cannot be part of the transformation.
+
+ 
+ # This loads your data into a data set:
+ rbdata <- data.frame(Y, X1, X2, X3, X4, X5, X6, X7, X8, X9, X10)
+ 
+ #Now fit your model to make sure it comes out significant:
+ mylm <- lm(Y ~ 0, data=rbdata) #edit this code to be your true model
+ summary(mylm) %>% pander()
+ #all p-values must be significant, except the "(Intercept)"
+ #the R^2 value must be greater than or equal to 0.30.
+
+ 
+ #Plot your True model (dashed lines) along with the correct estimated model (solid lines)
+ #Your model must be cleanly visualizable with a 2D scatterplot.
+ 
+ 
+ 
+```
+  
+```{r, eval=FALSE}
+# Once you are ready, run this code to write your data to a csv:
+write.csv(rbdata, "rbdata.csv", row.names=FALSE)
+# The above code writes the dataset to your "current directory"
+# To see where that is, use: getwd() in your Console.
+# Find the data set and upload it to I-Learn.
+```
+
+
+ 
+## The Plot of your Model
+
+Provide a 2D scatterplot that shows both your *true* model and *estimated* model on the same scatterplot. This should look nearly identical to your Desmos graph. This is the most important part of this assignment. This is where you earn your opportunity to participate in Regression Battleship.
+
+```{r}
+
+```
+ 

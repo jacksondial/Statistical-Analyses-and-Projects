@@ -1,0 +1,63 @@
+---
+title: "Peer Battleship"
+author: "Jackson Dial"
+date: "6/17/2020"
+output: html_document
+---
+```{r}
+library(readr)
+lisa <- read.csv("Lisa.csv")
+View(lisa)
+
+##Did not use X1 as continuous variable
+
+pairs(lisa, panel=panel.smooth)
+
+mylm <- lm(Y ~ X1, data = lisa)
+summary(mylm)
+plot(Y ~ X9, data = lisa)
+
+pairs( cbind(Res = mylm$residuals, Fit = mylm$fit, lisa), panel=panel.smooth)
+lm.2 <- lm(Y ~ X9 + X8, data = lisa)
+summary(lm.2)
+
+pairs( cbind(Res = lm.2$residuals, Fit = lm.2$fit, lisa), panel=panel.smooth)
+
+lm.3 <- lm(Y ~ X1, data = lisa)
+summary(lm.3)
+pairs( cbind(Res = lm.3$residuals, Fit = lm.3$fit, lisa), panel=panel.smooth)
+
+lm.4 <- lm(Y ~ X6 * X2 * X4 * X8 * X9, data = lisa)
+summary(lm.4)
+pairs( cbind(Res = lm.4$residuals, Fit = lm.4$fit, lisa), panel=panel.smooth)
+
+lm.6 <- lm(Y ~ log(X6) + X2 + X4 + X9 + X2:X9 + X4:X9 + X2:X4:X9, data = lisa)
+summary(lm.6)
+pairs( cbind(Res = lm.6$residuals, Fit = lm.6$fit, lisa), panel=panel.smooth)
+
+
+
+lm.5 <- lm(Y ~ I(X6^2) + X4 + X9 + X8:X6, data = lisa)
+summary(lm.5)
+pairs( cbind(Res = lm.5$residuals, Fit = lm.5$fit, lisa), panel=panel.smooth)
+plot(Y ~ X6, col = as.factor(X2), data = lisa, pch = 19)
+
+```
+
+```{r}
+trevor <- read.csv("Trevor.csv")
+View(trevor)
+
+pairs(trevor, panel=panel.smooth)
+
+t.1 <- lm(Y ~ X1 + X9 + X1:X9 + X1:X3 + X1:X4 + X9:I(X1)^2 + X6:I(X1)^3, data = trevor)
+summary(t.1)
+pairs( cbind(Res = t.1$residuals, Fit = t.1$fit, trevor), panel=panel.smooth)
+
+plot(Y ~ X1, col = interaction(X9,X6,X2,drop = TRUE), data = trevor, pch = 19)
+with(trevor,levels(interaction(X9,X6,X2,drop=TRUE)))
+palette()
+
+```
+
+

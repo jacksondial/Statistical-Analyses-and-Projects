@@ -1,0 +1,652 @@
+---
+title: "Model Validation"
+author: "Jackson Dial"
+date: "6/19/2020"
+output: html_document
+---
+```{r}
+set.seed(122) #This ensures the randomness is the "same" everytime if you play the entire R-chunk as one entire piece of code. If you run lines separately, your data might not come out the same every time. You can pick any integer value you want for set.seed. Each choice produces a different sample, so you might want to play around with a few different choices.
+
+## To begin, decide on your sample size. (You may have to revise it later to ensure all values in your lm(...) are significant.)
+  
+ n <- 300
+  
+## Then, create 10 X-variables using functions like rnorm(n, mean, sd), rchisq(n, df), rf(n, df1, df2), rt(n, df), rbeta(n, a, b), runif(n, a, b) or sample(c(1,0), n, replace=TRUE)... to see what any of these functions do, run codes like hist(rchisq(n, 3)). These functions are simply allowing you to get a random sample of x-values.
+
+ X1 <- sample(c(1,0), n, replace=TRUE) #replace this
+ X2 <- runif(n, -.7, 7) #replace this
+ X3 <- sample(c(1,0), n, replace=TRUE) # dummy variable
+ X4 <- sample(c(1,0), n, replace=TRUE) #replace this
+ X5 <- sample(c(1,0), n, replace=TRUE) # dummy variable
+ X6 <- runif(n,-1.3, .6) #replace this
+ X7 <- runif(n,-.98, .63) #replace this
+ X8 <- runif(n,-1.05,.57) #quantitative variable
+ X9 <- sample(c(1,0), n, replace=TRUE) # dummy variable
+ X10 <- runif(n,-1.17, .68) #replace this
+ 
+## Then, create betas, sigma, normal error terms and Y
+ 
+  beta0 <- 1
+  beta1 <- -.3
+  beta2 <- .2
+  beta3 <- .5
+  beta4 <- -.2
+  beta5 <- .2
+  beta6 <- -.11
+  beta7 <- .75
+  beta8 <- -.27
+  beta9 <- -.9
+  beta10 <- .11
+  beta11 <- -2.45
+  beta12 <- -1.5
+  beta13 <- -.19
+  beta14 <- -.85
+  beta15 <- .6
+  beta16 <- .16
+  beta17 <- 1.65
+  beta18 <- 2.7
+  beta19 <- 2.9
+  
+ 
+ sigma <- 0.1 #change to whatever positive number you want
+
+
+ ################################
+ # You CANNOT change this part:
+ epsilon_i <- rnorm(n, 0, sigma)
+ ################################ 
+ 
+ #An example of how to make Y...
+ # Y <-  beta0 + beta1*X1 + beta2*X2 + beta3*X4*X2 + epsilon_i
+ 
+ Y <- beta0 + beta1*X8 + #baseline
+   beta2*X3 + beta3*X3*X8 + #second line
+   beta4*X5 + beta5*X5*X8 + #third line
+   beta6*X9 + beta7*X9*X8 + #fourth line
+   beta8*X3*X5 + beta9*X3*X5*X8 + #fifth line
+   beta10*X3*X9 + beta11*X3*X9*X8 + beta12*X3*X9*X8^2 + #first parabolic
+   beta13*X9*X5 + beta14*X9*X5*X8 + beta15*X9*X5*X8^2 + #second parabolic
+   beta16*X9*X5*X3 + beta17*X9*X5*X3*X8 + beta18*X9*X5*X3*X8^2 + beta19*X9*X5*X3*X8^3 + #cubic
+   + epsilon_i
+ 
+ 
+ # You can include Y' or X' instead of Y or X if you wish.
+ # Remember, only these functions are allowed when transforming
+ # variables: 1/Y^2, 1/Y, log(Y), sqrt(Y), sqrt(sqrt(Y)), Y^2, Y^3, 1/X^2, 1/X, log(X), sqrt(X), sqrt(sqrt(X)), X^2, X^3, X^4, X^5. 
+ #########################################################
+ # ILLEGAL: Y = (beta0 + beta1*X5)^2 + epsilon_i #########
+ #########################################################
+ # Legal: sqrt(Y) = beta0 + beta1*X5^2 + epsilon_i #######
+ #########################################################
+ # You can only transform individual terms, not groups of terms.
+ # And the beta's cannot be part of the transformation.
+
+ 
+ # This loads your data into a data set:
+ rbdata <- data.frame(Y, X1, X2, X3, X4, X5, X6, X7, X8, X9, X10)
+```
+
+```{r}
+set.seed(1999) #This ensures the randomness is the "same" everytime if you play the entire R-chunk as one entire piece of code. If you run lines separately, your data might not come out the same every time. You can pick any integer value you want for set.seed. Each choice produces a different sample, so you might want to play around with a few different choices.
+
+## To begin, decide on your sample size. (You may have to revise it later to ensure all values in your lm(...) are significant.)
+  
+ n <- 300
+  
+## Then, create 10 X-variables using functions like rnorm(n, mean, sd), rchisq(n, df), rf(n, df1, df2), rt(n, df), rbeta(n, a, b), runif(n, a, b) or sample(c(1,0), n, replace=TRUE)... to see what any of these functions do, run codes like hist(rchisq(n, 3)). These functions are simply allowing you to get a random sample of x-values.
+
+ X1 <- sample(c(1,0), n, replace=TRUE) #replace this
+ X2 <- runif(n, -.7, 7) #replace this
+ X3 <- sample(c(1,0), n, replace=TRUE) # dummy variable
+ X4 <- sample(c(1,0), n, replace=TRUE) #replace this
+ X5 <- sample(c(1,0), n, replace=TRUE) # dummy variable
+ X6 <- runif(n,-1.3, .6) #replace this
+ X7 <- runif(n,-.98, .63) #replace this
+ X8 <- runif(n,-1.05,.57) #quantitative variable
+ X9 <- sample(c(1,0), n, replace=TRUE) # dummy variable
+ X10 <- runif(n,-1.17, .68) #replace this
+ 
+## Then, create betas, sigma, normal error terms and Y
+ 
+  beta0 <- 1
+  beta1 <- -.3
+  beta2 <- .2
+  beta3 <- .5
+  beta4 <- -.2
+  beta5 <- .2
+  beta6 <- -.11
+  beta7 <- .75
+  beta8 <- -.27
+  beta9 <- -.9
+  beta10 <- .11
+  beta11 <- -2.45
+  beta12 <- -1.5
+  beta13 <- -.19
+  beta14 <- -.85
+  beta15 <- .6
+  beta16 <- .16
+  beta17 <- 1.65
+  beta18 <- 2.7
+  beta19 <- 2.9
+  
+ 
+ sigma <- 0.1 #change to whatever positive number you want
+
+
+ ################################
+ # You CANNOT change this part:
+ epsilon_i <- rnorm(n, 0, sigma)
+ ################################ 
+ 
+ #An example of how to make Y...
+ # Y <-  beta0 + beta1*X1 + beta2*X2 + beta3*X4*X2 + epsilon_i
+ 
+ Y <- beta0 + beta1*X8 + #baseline
+   beta2*X3 + beta3*X3*X8 + #second line
+   beta4*X5 + beta5*X5*X8 + #third line
+   beta6*X9 + beta7*X9*X8 + #fourth line
+   beta8*X3*X5 + beta9*X3*X5*X8 + #fifth line
+   beta10*X3*X9 + beta11*X3*X9*X8 + beta12*X3*X9*X8^2 + #first parabolic
+   beta13*X9*X5 + beta14*X9*X5*X8 + beta15*X9*X5*X8^2 + #second parabolic
+   beta16*X9*X5*X3 + beta17*X9*X5*X3*X8 + beta18*X9*X5*X3*X8^2 + beta19*X9*X5*X3*X8^3 + #cubic
+   + epsilon_i
+ 
+ 
+ # You can include Y' or X' instead of Y or X if you wish.
+ # Remember, only these functions are allowed when transforming
+ # variables: 1/Y^2, 1/Y, log(Y), sqrt(Y), sqrt(sqrt(Y)), Y^2, Y^3, 1/X^2, 1/X, log(X), sqrt(X), sqrt(sqrt(X)), X^2, X^3, X^4, X^5. 
+ #########################################################
+ # ILLEGAL: Y = (beta0 + beta1*X5)^2 + epsilon_i #########
+ #########################################################
+ # Legal: sqrt(Y) = beta0 + beta1*X5^2 + epsilon_i #######
+ #########################################################
+ # You can only transform individual terms, not groups of terms.
+ # And the beta's cannot be part of the transformation.
+
+ 
+ # This loads your data into a data set:
+ rbdata2 <- data.frame(Y, X1, X2, X3, X4, X5, X6, X7, X8, X9, X10)
+```
+
+
+```{r}
+# Compute R-squared for each validation
+mylm <- lm(Y ~ X8 + X3 + X3:X8 + X5 + X5:X8 + X9 + X9:X8 + X3:X5 + X3:X5:X8 + X3:X9 + X3:X9:X8 + I(X8^2):X3:X9 + X9:X5 + X9:X5:X8 + I(X8^2):X9:X5 + X9:X5:X3 + X9:X5:X3:X8 + I(X8^2):X9:X5:X3 + I(X8^3):X9:X5:X3, data=rbdata)
+
+lmh <- lm(Y~X8+X5+X9+X3:X8+X5:X8+X9:X8+X5:X3:I(X8^2)+X5:I(X8^2)+X9:X3, data=rbdata)
+
+lmt <- lm(Y ~ X8 + X5 + X5:X8 + X3 + X3:X8 + I(X8^3):X3 + I(X8^2):X5 + X1:X8 + X8:X9 + I(X8^2):X9, data = rbdata)
+
+lms <- lm(Y ~ X8 + 
+            X3 + X3:X8 +
+            X5 + X5:X8 +
+            X9 + X9:X8 +
+            X3:X5 + X3:X5:X8 + 
+            X3:X9 + X3:X9:X8 + X3:X9:I(X8^2) + 
+            X5:X9 + X5:X9:X8 + X5:X9:I(X8^2) + 
+            X3:X5:X9 + X3:X5:X9:X8 + X3:X5:X9:I(X8^2) + X3:X5:X9:I(X8^3), data=rbdata)
+
+
+  # Get y-hat for each model on new data.
+  yhtm <- predict(mylm, newdata = rbdata2)
+  yhth <- predict(lmh, newdata = rbdata2)
+  yhtt <- predict(lmt, newdata = rbdata2)
+  yhts <- predict(lms, newdata = rbdata2)
+  
+  # Compute y-bar
+  ybar <- mean(rbdata2$Y) #Yi is given by Ynew from the new sample of data
+  
+  # Compute SSTO
+  SSTO <- sum( (rbdata2$Y - ybar)^2 )
+  
+  # Compute SSE for each model using y - yhat
+  SSEmy <- sum( (rbdata2$Y - yhtm)^2 )
+  SSEh <- sum( (rbdata2$Y - yhth)^2 )
+  SSEt <- sum( (rbdata2$Y - yhtt)^2 )
+  SSEs <- sum( (rbdata2$Y - yhts)^2 )
+  
+  # Compute R-squared for each
+  rsmy <- 1 - SSEmy/SSTO
+  rsh <- 1 - SSEh/SSTO
+  rst <- 1 - SSEt/SSTO
+  rss <- 1 - SSEs/SSTO
+  
+  # Compute adjusted R-squared for each
+  n <- length(rbdata2$Y) #sample size
+  pmy <- length(coef(mylm))
+  ph <- length(coef(lmh)) #num. parameters in model
+  pt <- length(coef(lmt)) #num. parameters in model
+  ps <- length(coef(lms)) #num. parameters in model
+  rsmya <- 1 - (n-1)/(n-pmy)*SSEmy/SSTO
+  rsha <- 1 - (n-1)/(n-ph)*SSEh/SSTO
+  rsta <- 1 - (n-1)/(n-pt)*SSEt/SSTO
+  rssa <- 1 - (n-1)/(n-ps)*SSEs/SSTO
+  
+  my_output_table2 <- data.frame(Model = c("True", "Hannah", "Trevor", "Brother Saunders"), `Original R2` = c(summary(mylm)$r.squared, summary(lmh)$r.squared, summary(lmt)$r.squared, summary(lms)$r.squared), `Orig. Adj. R-squared` = c(summary(mylm)$adj.r.squared, summary(lmh)$adj.r.squared, summary(lmt)$adj.r.squared, summary(lms)$adj.r.squared), `Validation R-squared` = c(rsmy, rsh, rst, rss), `Validation Adj. R^2` = c(rsmya, rsha, rsta, rssa))
+
+colnames(my_output_table2) <- c("Model", "Original $R^2$", "Original Adj. $R^2$", "Validation $R^2$", "Validation Adj. $R^2$")
+
+knitr::kable(my_output_table2, escape=TRUE, digits=4)
+```
+
+
+```{r}
+set.seed(1999) #This ensures the randomness is the "same" everytime if you play the entire R-chunk as one entire piece of code. If you run lines separately, your data might not come out the same every time. You can pick any integer value you want for set.seed. Each choice produces a different sample, so you might want to play around with a few different choices.
+
+## To begin, decide on your sample size. (You may have to revise it later to ensure all values in your lm(...) are significant.)
+  
+ n <- 300
+  
+## Then, create 10 X-variables using functions like rnorm(n, mean, sd), rchisq(n, df), rf(n, df1, df2), rt(n, df), rbeta(n, a, b), runif(n, a, b) or sample(c(1,0), n, replace=TRUE)... to see what any of these functions do, run codes like hist(rchisq(n, 3)). These functions are simply allowing you to get a random sample of x-values.
+
+ X1 <- sample(c(1,0), n, replace=TRUE) #replace this
+ X2 <- runif(n, -.7, 7) #replace this
+ X3 <- sample(c(1,0), n, replace=TRUE) # dummy variable
+ X4 <- sample(c(1,0), n, replace=TRUE) #replace this
+ X5 <- sample(c(1,0), n, replace=TRUE) # dummy variable
+ X6 <- runif(n,-1.3, .6) #replace this
+ X7 <- runif(n,-.98, .63) #replace this
+ X8 <- runif(n,-1.05,.57) #quantitative variable
+ X9 <- sample(c(1,0), n, replace=TRUE) # dummy variable
+ X10 <- runif(n,-1.17, .68) #replace this
+ 
+## Then, create betas, sigma, normal error terms and Y
+ 
+  beta0 <- 1
+  beta1 <- -.3
+  beta2 <- .2
+  beta3 <- .5
+  beta4 <- -.2
+  beta5 <- .2
+  beta6 <- -.11
+  beta7 <- .75
+  beta8 <- -.27
+  beta9 <- -.9
+  beta10 <- .11
+  beta11 <- -2.45
+  beta12 <- -1.5
+  beta13 <- -.19
+  beta14 <- -.85
+  beta15 <- .6
+  beta16 <- .16
+  beta17 <- 1.65
+  beta18 <- 2.7
+  beta19 <- 2.9
+  
+ 
+ sigma <- 0.1 #change to whatever positive number you want
+
+
+ ################################
+ # You CANNOT change this part:
+ epsilon_i <- rnorm(n, 0, sigma)
+ ################################ 
+ 
+ #An example of how to make Y...
+ # Y <-  beta0 + beta1*X1 + beta2*X2 + beta3*X4*X2 + epsilon_i
+ 
+ Y <- beta0 + beta1*X8 + #baseline
+   beta2*X3 + beta3*X3*X8 + #second line
+   beta4*X5 + beta5*X5*X8 + #third line
+   beta6*X9 + beta7*X9*X8 + #fourth line
+   beta8*X3*X5 + beta9*X3*X5*X8 + #fifth line
+   beta10*X3*X9 + beta11*X3*X9*X8 + beta12*X3*X9*X8^2 + #first parabolic
+   beta13*X9*X5 + beta14*X9*X5*X8 + beta15*X9*X5*X8^2 + #second parabolic
+   beta16*X9*X5*X3 + beta17*X9*X5*X3*X8 + beta18*X9*X5*X3*X8^2 + beta19*X9*X5*X3*X8^3 + #cubic
+   + epsilon_i
+ 
+ 
+ # You can include Y' or X' instead of Y or X if you wish.
+ # Remember, only these functions are allowed when transforming
+ # variables: 1/Y^2, 1/Y, log(Y), sqrt(Y), sqrt(sqrt(Y)), Y^2, Y^3, 1/X^2, 1/X, log(X), sqrt(X), sqrt(sqrt(X)), X^2, X^3, X^4, X^5. 
+ #########################################################
+ # ILLEGAL: Y = (beta0 + beta1*X5)^2 + epsilon_i #########
+ #########################################################
+ # Legal: sqrt(Y) = beta0 + beta1*X5^2 + epsilon_i #######
+ #########################################################
+ # You can only transform individual terms, not groups of terms.
+ # And the beta's cannot be part of the transformation.
+
+ 
+ # This loads your data into a data set:
+ rbdata2 <- data.frame(Y, X1, X2, X3, X4, X5, X6, X7, X8, X9, X10)
+```
+
+
+### Model Guesses
+
+#### Hannah
+
+```{r}
+lmh <- lm(Y~X8+X5+X9+X3:X8+X5:X8+X9:X8+X5:X3:I(X8^2)+X5:I(X8^2)+X9:X3, data=rbdata)
+
+summary(lmh) %>% pander()
+```
+
+##### Plot
+
+```{r}
+plot(Y ~ X8, data = rbdata, col = interaction(X5,X9))
+b <- coef(lmh)
+
+X3 = 0
+X5 = 0
+X9 = 0
+curve(b[1] + b[2]*X8 + # baseline
+         b[3]*X5 + b[6]*X5*X8 + # X5 = ON
+         b[4]*X9 + b[7]*X9*X8 + # X9 = ON
+         b[5]*X8*X3 + # X3 = ON
+         b[9]*X9*X3 + # X3&X9 = ON
+         b[10]*X5*X3*X8^2 # X5&X3 = ON
+         , add = TRUE, xname = "X8", col = "black")
+X3 = 0
+X5 = 1
+X9 = 0
+curve(b[1] + b[2]*X8 + # baseline
+         b[3]*X5 + b[6]*X5*X8 + b[8]*X5*X8^2 + # X5 = ON
+         b[4]*X9 + b[7]*X9*X8 + # X9 = ON
+         b[5]*X8*X3 +# X3 = ON
+         b[9]*X9*X3 + # X3&X9 = ON
+         b[10]*X5*X3*X8^2 # X5&X3 = ON
+         , add = TRUE, xname = "X8", col = "red")
+X3 = 0
+X5 = 0
+X9 = 1
+curve(b[1] + b[2]*X8 + # baseline
+         b[3]*X5 + b[6]*X5*X8 + # X5 = ON
+         b[4]*X9 + b[7]*X9*X8 + # X9 = ON
+         b[5]*X8*X3 + # X3 = ON
+         b[9]*X9*X3 + # X3&X9 = ON
+         b[10]*X5*X3*X8^2 # X5&X3 = ON
+         , add = TRUE, xname = "X8", col = "blue")
+X3 = 1
+X5 = 0
+X9 = 0
+curve(b[1] + b[2]*X8 + # baseline
+         b[3]*X5 + b[6]*X5*X8 + # X5 = ON
+         b[4]*X9 + b[7]*X9*X8 + # X9 = ON
+         b[5]*X8*X3 + # X3 = ON
+         b[9]*X9*X3 + # X3&X9 = ON
+         b[10]*X5*X3*X8^2 # X5&X3 = ON
+         , add = TRUE, xname = "X8", col = "blue")
+X3 = 1
+X5 = 1
+X9 = 0
+curve(b[1] + b[2]*X8 + # baseline
+         b[3]*X5 + b[6]*X5*X8 + b[8]*X5*X8^2 + # X5 = ON
+         b[4]*X9 + b[7]*X9*X8 + # X9 = ON
+         b[5]*X8*X3 + # X3 = ON
+         b[9]*X9*X3 + # X3&X9 = ON
+         b[10]*X5*X3*X8^2 # X5&X3 = ON
+         , add = TRUE, xname = "X8", col = "green3")
+
+```
+
+
+#### Trevor
+
+```{r}
+lmt <- lm(Y ~ X8 + X5 + X5:X8 + X3 + X3:X8 + I(X8^3):X3 + I(X8^2):X5 + X1:X8 + X8:X9 + I(X8^2):X9, data = rbdata)
+
+summary(lmt) %>% pander()
+```
+
+##### Plot
+
+```{r}
+plot(Y ~ X8, data = rbdata, col = interaction(X3,X5,X9))
+b <- coef(lmt)
+X5 = 0
+X3 = 0
+X9 = 0
+X1 = 0
+curve(b[1] + b[2]*X8 + #baseline
+         b[3]*X5 + b[5]*X5*X8 + b[8]*X5*X8^2 + #X5= On
+         b[4]*X3 + b[6]*X3*X8 + b[7]*X3*X8^3 + # X3 = On
+         b[9]*X1 + # X1 = ON
+         b[10]*X9*X8 + b[11]*X9*X8^2
+         , add = TRUE, xname = "X8", col = "black")
+X5 = 1
+X3 = 0
+X9 = 0
+X1 = 0
+curve(b[1] + b[2]*X8 + #baseline
+         b[3]*X5 + b[5]*X5*X8 + b[8]*X5*X8^2 + #X5= On
+         b[4]*X3 + b[6]*X3*X8 + b[7]*X3*X8^3 + # X3 = On
+         b[9]*X1 + # X1 = ON
+         b[10]*X9*X8 + b[11]*X9*X8^2
+         , add = TRUE, xname = "X8", col = "yellow")
+X5 = 0
+X3 = 1
+X9 = 0
+X1 = 0
+curve(b[1] + b[2]*X8 + #baseline
+         b[3]*X5 + b[5]*X5*X8 + b[8]*X5*X8^2 + #X5= On
+         b[4]*X3 + b[6]*X3*X8 + b[7]*X3*X8^3 + # X3 = On
+         b[9]*X1 + # X1 = ON
+         b[10]*X9*X8 + b[11]*X9*X8^2
+         , add = TRUE, xname = "X8", col = "grey")
+X5 = 0
+X3 = 0
+X9 = 0
+X1 = 1
+curve(b[1] + b[2]*X8 + #baseline
+         b[3]*X5 + b[5]*X5*X8 + b[8]*X5*X8^2 + #X5= On
+         b[4]*X3 + b[6]*X3*X8 + b[7]*X3*X8^3 + # X3 = On
+         b[9]*X1 + # X1 = ON
+         b[10]*X9*X8 + b[11]*X9*X8^2
+         , add = TRUE, xname = "X8", col = "cyan")
+X5 = 0
+X3 = 0
+X9 = 1
+X1 = 0
+curve(b[1] + b[2]*X8 + #baseline
+         b[3]*X5 + b[5]*X5*X8 + b[8]*X5*X8^2 + #X5= On
+         b[4]*X3 + b[6]*X3*X8 + b[7]*X3*X8^3 + # X3 = On
+         b[9]*X1 + # X1 = ON
+         b[10]*X9*X8 + b[11]*X9*X8^2
+         , add = TRUE, xname = "X8", col = "magenta")
+```
+
+#### Brother Saunders
+```{r}
+lms <- lm(Y ~ X8 + 
+            X3 + X3:X8 +
+            X5 + X5:X8 +
+            X9 + X9:X8 +
+            X3:X5 + X3:X5:X8 + 
+            X3:X9 + X3:X9:X8 + X3:X9:I(X8^2) + 
+            X5:X9 + X5:X9:X8 + X5:X9:I(X8^2) + 
+            X3:X5:X9 + X3:X5:X9:X8 + X3:X5:X9:I(X8^2) + X3:X5:X9:I(X8^3), data=rbdata)
+
+summary(lms) %>% pander()
+```
+
+##### Plot
+
+```{r}
+plot(Y ~ X8, data = rbdata, col = interaction(X3,X5,X9))
+X5=0
+X3=0
+X9=0
+curve(beta0 + beta1*X8 + #baseline
+   beta2*X3 + beta3*X3*X8 + #second line
+   beta4*X5 + beta5*X5*X8 + #third line
+   beta6*X9 + beta7*X9*X8 + #fourth line
+   beta8*X3*X5 + beta9*X3*X5*X8 + #fifth line
+   beta10*X3*X9 + beta11*X3*X9*X8 + beta12*X3*X9*X8^2 + #first parabolic
+   beta13*X9*X5 + beta14*X9*X5*X8 + beta15*X9*X5*X8^2 + #second parabolic
+   beta16*X9*X5*X3 + beta17*X9*X5*X3*X8 + beta18*X9*X5*X3*X8^2 + beta19*X9*X5*X3*X8^3, add = TRUE, xname="X8", col = "black")
+curve(b[1] + b[2]*X8 + #baseline
+   b[3]*X3 + b[6]*X3*X8 + #second line
+   b[4]*X5 + b[7]*X5*X8 + #third line
+   b[5]*X9 + b[8]*X9*X8 + #fourth line
+   b[9]*X3*X5 + b[12]*X3*X5*X8 + #fifth line
+   b[10]*X3*X9 + b[13]*X3*X9*X8 + b[14]*X3*X9*X8^2 + #first parabolic
+   b[11]*X9*X5 + b[15]*X9*X5*X8 + b[16]*X9*X5*X8^2 + #second parabolic
+   b[17]*X9*X5*X3 + b[18]*X9*X5*X3*X8 + b[19]*X9*X5*X3*X8^2 + b[20]*X9*X5*X3*X8^3, add = TRUE, xname="X8", lty = 2, col = "black")
+
+##
+
+X5=0
+X3=1
+X9=0
+curve(beta0 + beta1*X8 + #baseline
+   beta2*X3 + beta3*X3*X8 + #second line
+   beta4*X5 + beta5*X5*X8 + #third line
+   beta6*X9 + beta7*X9*X8 + #fourth line
+   beta8*X3*X5 + beta9*X3*X5*X8 + #fifth line
+   beta10*X3*X9 + beta11*X3*X9*X8 + beta12*X3*X9*X8^2 + #first parabolic
+   beta13*X9*X5 + beta14*X9*X5*X8 + beta15*X9*X5*X8^2 + #second parabolic
+   beta16*X9*X5*X3 + beta17*X9*X5*X3*X8 + beta18*X9*X5*X3*X8^2 + beta19*X9*X5*X3*X8^3, add = TRUE, xname="X8", col = "red")
+curve(b[1] + b[2]*X8 + #baseline
+   b[3]*X3 + b[6]*X3*X8 + #second line
+   b[4]*X5 + b[7]*X5*X8 + #third line
+   b[5]*X9 + b[8]*X9*X8 + #fourth line
+   b[9]*X3*X5 + b[12]*X3*X5*X8 + #fifth line
+   b[10]*X3*X9 + b[13]*X3*X9*X8 + b[14]*X3*X9*X8^2 + #first parabolic
+   b[11]*X9*X5 + b[15]*X9*X5*X8 + b[16]*X9*X5*X8^2 + #second parabolic
+   b[17]*X9*X5*X3 + b[18]*X9*X5*X3*X8 + b[19]*X9*X5*X3*X8^2 + b[20]*X9*X5*X3*X8^3, add = TRUE, xname="X8", lty = 2, col = "red")
+##
+
+X5=1
+X3=0
+X9=0
+curve(beta0 + beta1*X8 + #baseline
+   beta2*X3 + beta3*X3*X8 + #second line
+   beta4*X5 + beta5*X5*X8 + #third line
+   beta6*X9 + beta7*X9*X8 + #fourth line
+   beta8*X3*X5 + beta9*X3*X5*X8 + #fifth line
+   beta10*X3*X9 + beta11*X3*X9*X8 + beta12*X3*X9*X8^2 + #first parabolic
+   beta13*X9*X5 + beta14*X9*X5*X8 + beta15*X9*X5*X8^2 + #second parabolic
+   beta16*X9*X5*X3 + beta17*X9*X5*X3*X8 + beta18*X9*X5*X3*X8^2 + beta19*X9*X5*X3*X8^3, add = TRUE, xname="X8", col = "green3")
+curve(b[1] + b[2]*X8 + #baseline
+   b[3]*X3 + b[6]*X3*X8 + #second line
+   b[4]*X5 + b[7]*X5*X8 + #third line
+   b[5]*X9 + b[8]*X9*X8 + #fourth line
+   b[9]*X3*X5 + b[12]*X3*X5*X8 + #fifth line
+   b[10]*X3*X9 + b[13]*X3*X9*X8 + b[14]*X3*X9*X8^2 + #first parabolic
+   b[11]*X9*X5 + b[15]*X9*X5*X8 + b[16]*X9*X5*X8^2 + #second parabolic
+   b[17]*X9*X5*X3 + b[18]*X9*X5*X3*X8 + b[19]*X9*X5*X3*X8^2 + b[20]*X9*X5*X3*X8^3, add = TRUE, xname="X8", lty = 2, col = "green3")
+
+##
+X5=0
+X3=0
+X9=1
+curve(beta0 + beta1*X8 + #baseline
+   beta2*X3 + beta3*X3*X8 + #second line
+   beta4*X5 + beta5*X5*X8 + #third line
+   beta6*X9 + beta7*X9*X8 + #fourth line
+   beta8*X3*X5 + beta9*X3*X5*X8 + #fifth line
+   beta10*X3*X9 + beta11*X3*X9*X8 + beta12*X3*X9*X8^2 + #first parabolic
+   beta13*X9*X5 + beta14*X9*X5*X8 + beta15*X9*X5*X8^2 + #second parabolic
+   beta16*X9*X5*X3 + beta17*X9*X5*X3*X8 + beta18*X9*X5*X3*X8^2 + beta19*X9*X5*X3*X8^3, add = TRUE, xname="X8", col = "cyan")
+curve(b[1] + b[2]*X8 + #baseline
+   b[3]*X3 + b[6]*X3*X8 + #second line
+   b[4]*X5 + b[7]*X5*X8 + #third line
+   b[5]*X9 + b[8]*X9*X8 + #fourth line
+   b[9]*X3*X5 + b[12]*X3*X5*X8 + #fifth line
+   b[10]*X3*X9 + b[13]*X3*X9*X8 + b[14]*X3*X9*X8^2 + #first parabolic
+   b[11]*X9*X5 + b[15]*X9*X5*X8 + b[16]*X9*X5*X8^2 + #second parabolic
+   b[17]*X9*X5*X3 + b[18]*X9*X5*X3*X8 + b[19]*X9*X5*X3*X8^2 + b[20]*X9*X5*X3*X8^3, add = TRUE, xname="X8", lty = 2, col = "cyan")
+
+
+X5=1
+X3=1
+X9=0
+curve(beta0 + beta1*X8 + #baseline
+   beta2*X3 + beta3*X3*X8 + #second line
+   beta4*X5 + beta5*X5*X8 + #third line
+   beta6*X9 + beta7*X9*X8 + #fourth line
+   beta8*X3*X5 + beta9*X3*X5*X8 + #fifth line
+   beta10*X3*X9 + beta11*X3*X9*X8 + beta12*X3*X9*X8^2 + #first parabolic
+   beta13*X9*X5 + beta14*X9*X5*X8 + beta15*X9*X5*X8^2 + #second parabolic
+   beta16*X9*X5*X3 + beta17*X9*X5*X3*X8 + beta18*X9*X5*X3*X8^2 + beta19*X9*X5*X3*X8^3, add = TRUE, xname="X8", col = "blue")
+curve(b[1] + b[2]*X8 + #baseline
+   b[3]*X3 + b[6]*X3*X8 + #second line
+   b[4]*X5 + b[7]*X5*X8 + #third line
+   b[5]*X9 + b[8]*X9*X8 + #fourth line
+   b[9]*X3*X5 + b[12]*X3*X5*X8 + #fifth line
+   b[10]*X3*X9 + b[13]*X3*X9*X8 + b[14]*X3*X9*X8^2 + #first parabolic
+   b[11]*X9*X5 + b[15]*X9*X5*X8 + b[16]*X9*X5*X8^2 + #second parabolic
+   b[17]*X9*X5*X3 + b[18]*X9*X5*X3*X8 + b[19]*X9*X5*X3*X8^2 + b[20]*X9*X5*X3*X8^3, add = TRUE, xname="X8", lty = 2, col = "blue")
+
+##
+
+X5=0
+X3=1
+X9=1
+curve(beta0 + beta1*X8 + #baseline
+   beta2*X3 + beta3*X3*X8 + #second line
+   beta4*X5 + beta5*X5*X8 + #third line
+   beta6*X9 + beta7*X9*X8 + #fourth line
+   beta8*X3*X5 + beta9*X3*X5*X8 + #fifth line
+   beta10*X3*X9 + beta11*X3*X9*X8 + beta12*X3*X9*X8^2 + #first parabolic
+   beta13*X9*X5 + beta14*X9*X5*X8 + beta15*X9*X5*X8^2 + #second parabolic
+   beta16*X9*X5*X3 + beta17*X9*X5*X3*X8 + beta18*X9*X5*X3*X8^2 + beta19*X9*X5*X3*X8^3, add = TRUE, xname="X8", col = "magenta")
+curve(b[1] + b[2]*X8 + #baseline
+   b[3]*X3 + b[6]*X3*X8 + #second line
+   b[4]*X5 + b[7]*X5*X8 + #third line
+   b[5]*X9 + b[8]*X9*X8 + #fourth line
+   b[9]*X3*X5 + b[12]*X3*X5*X8 + #fifth line
+   b[10]*X3*X9 + b[13]*X3*X9*X8 + b[14]*X3*X9*X8^2 + #first parabolic
+   b[11]*X9*X5 + b[15]*X9*X5*X8 + b[16]*X9*X5*X8^2 + #second parabolic
+   b[17]*X9*X5*X3 + b[18]*X9*X5*X3*X8 + b[19]*X9*X5*X3*X8^2 + b[20]*X9*X5*X3*X8^3, add = TRUE, xname="X8", lty = 2, col = "magenta")
+
+##
+
+X5=1
+X3=0
+X9=1
+curve(beta0 + beta1*X8 + #baseline
+   beta2*X3 + beta3*X3*X8 + #second line
+   beta4*X5 + beta5*X5*X8 + #third line
+   beta6*X9 + beta7*X9*X8 + #fourth line
+   beta8*X3*X5 + beta9*X3*X5*X8 + #fifth line
+   beta10*X3*X9 + beta11*X3*X9*X8 + beta12*X3*X9*X8^2 + #first parabolic
+   beta13*X9*X5 + beta14*X9*X5*X8 + beta15*X9*X5*X8^2 + #second parabolic
+   beta16*X9*X5*X3 + beta17*X9*X5*X3*X8 + beta18*X9*X5*X3*X8^2 + beta19*X9*X5*X3*X8^3, add = TRUE, xname="X8", col = "yellow")
+curve(b[1] + b[2]*X8 + #baseline
+   b[3]*X3 + b[6]*X3*X8 + #second line
+   b[4]*X5 + b[7]*X5*X8 + #third line
+   b[5]*X9 + b[8]*X9*X8 + #fourth line
+   b[9]*X3*X5 + b[12]*X3*X5*X8 + #fifth line
+   b[10]*X3*X9 + b[13]*X3*X9*X8 + b[14]*X3*X9*X8^2 + #first parabolic
+   b[11]*X9*X5 + b[15]*X9*X5*X8 + b[16]*X9*X5*X8^2 + #second parabolic
+   b[17]*X9*X5*X3 + b[18]*X9*X5*X3*X8 + b[19]*X9*X5*X3*X8^2 + b[20]*X9*X5*X3*X8^3, add = TRUE, xname="X8", lty = 2, col = "yellow")
+
+##
+
+X5=1
+X3=1
+X9=1
+curve(beta0 + beta1*X8 + #baseline
+   beta2*X3 + beta3*X3*X8 + #second line
+   beta4*X5 + beta5*X5*X8 + #third line
+   beta6*X9 + beta7*X9*X8 + #fourth line
+   beta8*X3*X5 + beta9*X3*X5*X8 + #fifth line
+   beta10*X3*X9 + beta11*X3*X9*X8 + beta12*X3*X9*X8^2 + #first parabolic
+   beta13*X9*X5 + beta14*X9*X5*X8 + beta15*X9*X5*X8^2 + #second parabolic
+   beta16*X9*X5*X3 + beta17*X9*X5*X3*X8 + beta18*X9*X5*X3*X8^2 + beta19*X9*X5*X3*X8^3, add = TRUE, xname="X8", col = "gray")
+curve(b[1] + b[2]*X8 + #baseline
+   b[3]*X3 + b[6]*X3*X8 + #second line
+   b[4]*X5 + b[7]*X5*X8 + #third line
+   b[5]*X9 + b[8]*X9*X8 + #fourth line
+   b[9]*X3*X5 + b[12]*X3*X5*X8 + #fifth line
+   b[10]*X3*X9 + b[13]*X3*X9*X8 + b[14]*X3*X9*X8^2 + #first parabolic
+   b[11]*X9*X5 + b[15]*X9*X5*X8 + b[16]*X9*X5*X8^2 + #second parabolic
+   b[17]*X9*X5*X3 + b[18]*X9*X5*X3*X8 + b[19]*X9*X5*X3*X8^2 + b[20]*X9*X5*X3*X8^3, add = TRUE, xname="X8", lty = 2, col = "gray")
+
+##
+```
+
+
+ 
+### Confidence Intervals for Brother Saunders' Estimates
+
+```{r}
+confint(lms)
+```
+
+Each of the 95% confidence intervals of the estimates does capture the true value of the parameters.
+
