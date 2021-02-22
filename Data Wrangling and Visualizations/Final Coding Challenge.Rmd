@@ -1,0 +1,131 @@
+---
+title: "Final Coding Challenge"
+author: "Jackson Dial"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:  
+    keep_md: true
+    toc: true
+    toc_float: true
+    code_folding: hide
+    fig_height: 6
+    fig_width: 12
+    fig_align: 'center'
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r load_libraries, include=FALSE}
+# Use this R-Chunk to load all your libraries!
+#install.packages("tidyverse") # run this line once in console to get package
+library(tidyverse)
+library(lubridate)
+library(readr)
+library(directlabels)
+
+```
+
+## Data Wrangling
+
+```{r load_data}
+dat <- read_csv("Palmer_family_height.csv")
+
+data <- dat %>% mutate( 
+  date_correct = mdy(date))
+
+dat1 <- data %>% mutate(
+  age = difftime(as.Date(lag(date_correct)), as.Date(date_correct), unit = "days")
+)
+
+
+birthdate <- data %>% 
+  mutate(bd = as.Date(case_when(
+    name == "Kaylene" ~ "1982-11-05",
+    name == "Kent" ~ "2004-03-10",
+    name == "Mary" ~ "2006-04-01",
+    name == "Melody" ~ "2008-11-23",
+    name == "Ryan" ~ "2011-10-31",
+    name == "Tyson" ~ "2013-10-31"
+  )))
+
+ages <- birthdate %>% 
+  mutate(age_days = difftime(date_correct, bd)) %>% 
+  mutate(age_years = age_days / 365)
+
+```
+
+## Background
+
+_Your challenge is to re-create a graph similar to the visualization below. It doesn’t need to be an exact replica, but it should facilitate easy comparison of family members’ height at similar ages over time. To do this, you need to know the birth date of the people in the chart. Use these birth dates:_
+
+
+Kaylene: 1982-11-05
+
+Kent: 2004-03-10
+
+Mary: 2006-04-01
+
+Melody: 2008-11-23
+
+Ryan: 2011-10-31
+
+Tyson: 2013-10-31
+
+## Data Visualization
+
+```{r tidy_data}
+ggplot(ages, aes(x = age_years, y = height))+
+  geom_point(aes(color = as.factor(name)), size = 1)+
+  geom_line(aes(color = as.factor(name)))+
+  theme_bw()+
+  theme(legend.position = "none")+
+  labs(x = "Age (yrs)",
+       y = "Height (inches)",
+       title = "Palmer Family Height by Age")+
+  geom_dl(aes(label = name, color = name), method = list(dl.trans(x = x+.3, y = y-.3), "last.points"))+
+  xlim(0,17)
+```
+
+## Data Wrangling Part 2
+
+```{r plot_data}
+months <- ages %>% 
+  mutate(month = as.factor(month(date_correct)))
+
+round_age <- ages %>% mutate(
+  rounded = round(age_years))
+```
+
+
+## Data Visualizations Part 2
+
+```{r}
+ggplot(months, aes(x = as.factor(month)))+
+  geom_bar(fill = "dodgerblue")+
+  theme_bw()+
+  labs(x = "Month in which measurements were taken",
+       y = "Count of measurements",
+       title = "When in the year were they measured?")+
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.x = element_blank())
+
+ggplot(round_age, aes(x = as.factor(rounded)))+
+  geom_bar(fill = "springgreen3")+
+  theme_bw()+
+  labs(x = "Age when measured in Years",
+       y = "Count of measurements taken at accompanying age",
+       title = "At what age were they measured?")+
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.x = element_blank())
+```
+
+## Conclusions
+
+The first plot showing at what time in the year measurements were taken shows that January and November are common occurrences for measurements. May also seems to be more popular, but the other months do not seem to be as popular to get out the measuring stick.
+
+The second plot shows that the most common age to be measured is 4 years old. 7 is also common, but ages such as 1, 3, 15 and 16 are less common to measure a kid's height.
+

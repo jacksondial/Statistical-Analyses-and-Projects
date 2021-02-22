@@ -1,0 +1,88 @@
+---
+title: "Spatial Data and Measure Data"
+author: "Jackson Dial"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:  
+    keep_md: true
+    toc: true
+    toc_float: true
+    code_folding: hide
+    fig_height: 6
+    fig_width: 12
+    fig_align: 'center'
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r load_libraries, include=FALSE}
+# Use this R-Chunk to load all your libraries!
+#install.packages("tidyverse") # run this line once in console to get package
+library(tidyverse)
+library(sf)
+library(USAboundaries)
+library(ggrepel)
+```
+
+```{r load_data}
+# Use this R-Chunk to import all your datasets!
+
+```
+
+## Background
+
+_Up to this point, we have dealt with data that fits into the tidy format without much effort. Spatial data has many complicating factors that have made handling spatial data in R complicated. Big strides are being made to make spatial data tidy in R. However; we are in the middle of the transition._
+
+_We will use library(USAboundaries) and library(sf) to make a map of the US and show the top 3 largest cities in each state. Specifically, you will use library(ggplot2) and the function geom_sf() to recreate the provided image._
+
+## Data Wrangling
+
+```{r tidy_data}
+us_full <- us_states()
+us_filt <- us_full %>% filter(!state_name %in% c("Hawaii", "Alaska", "Puerto Rico"))
+
+us_cities <- us_cities() %>% 
+  filter(!state_name %in% c("Hawaii", "Alaska", "Puerto Rico"))
+
+us_arr <- us_cities %>% 
+  group_by(state_name) %>% 
+  mutate(rank = order(order(population, decreasing = TRUE))) %>% 
+  filter(rank %in% c(1,2,3)) %>% 
+  mutate(pop_adj = population / 1000)
+
+num_1 <- us_arr %>% 
+  filter(rank == 1)
+
+id_counties <- us_counties() %>% 
+  filter(state_name == "Idaho")
+
+```
+
+## Data Visualization
+
+```{r plot_data}
+myplot <- ggplot(us_filt)+
+  geom_sf(fill = NA)+
+  theme_bw()+
+  scale_color_manual(values = c("darkblue", "dodgerblue", "lightblue"))+
+  geom_sf(data = us_arr, aes(size = pop_adj, color = as.factor(rank)))+
+  geom_sf(data = id_counties, fill = NA) +
+  geom_label_repel(data = num_1, aes(label = city, geometry = geometry),
+                   stat = "sf_coordinates",
+                   size = 2)+
+  labs(x = element_blank(),
+       y = element_blank(),
+       size = "Population\n(1,000)")+
+  guides(color=FALSE,
+         size = guide_legend(override.aes = (list(color = "darkblue"))))
+
+myplot
+
+ggsave("US Cities Plot.png")
+
+```
+

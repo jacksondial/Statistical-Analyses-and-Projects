@@ -1,0 +1,126 @@
+---
+title: "The US Grocer"
+author: "Jackson Dial"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:  
+    keep_md: true
+    toc: true
+    toc_float: true
+    code_folding: hide
+    fig_height: 6
+    fig_width: 12
+    fig_align: 'center'
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r load_libraries, include=FALSE}
+# Use this R-Chunk to load all your libraries!
+#install.packages("tidyverse") # run this line once in console to get package
+library(tidyverse)
+library(dygraphs)
+library(tidyquant)
+library(timetk)
+```
+
+```{r load_data}
+```
+
+## Background
+
+_Interactive visualizations can often be powerful for data investigations. They let your team get at questions in real time. Use the Kroger (KR) stock price to build an interactive visualization of their performance over the last five years. Take some time to build a couple of different visualizations that show Kroger's performance. See the task items below for a description._
+
+## Data Wrangling
+
+```{r tidy_data}
+ticker <- "KR"
+kr_prices <- tq_get(ticker,
+       get = "stock.prices",
+       from = "2015-11-20")
+
+kr_return <- kr_prices %>% 
+  tq_mutate(select = adjusted,
+            mutate_fun = periodReturn,
+            period = "daily",
+            type = "arithmetic") %>% 
+  mutate(cumulative_return = cumsum(daily.returns))
+
+kr_only <- kr_prices %>% 
+  tq_transmute(select = adjusted,
+            mutate_fun = periodReturn,
+            period = "daily",
+            type = "arithmetic",
+            wealth.index = T)
+
+kr_port <- kr_return %>% 
+  tq_portfolio(assets_col = symbol,
+               returns_col = daily.returns,
+               weights = NULL,
+               wealth.index = T)
+
+kr_port_xts <- kr_port %>% 
+  timetk::tk_xts(date = date)
+
+kr_xts <- kr_return %>% 
+  timetk::tk_xts(date = date)
+
+kr_xts1 <- kr_only %>% 
+  timetk::tk_xts(date = date)
+
+
+dr_data <- kr_return %>%  select(date, daily.returns)
+cum_data <- kr_return %>% select(date, daily.returns)
+cum2_data <- cum_data %>% 
+  filter(date > "2018-04-05")
+
+
+dr_xts <- dr_data %>% timetk::tk_xts(date = date)
+cum_xts <- cum_data %>% timetk::tk_xts(date = date)
+cum2_xts <- cum2_data %>% timetk::tk_xts(date = date)
+
+
+```
+
+## Data Visualization
+
+```{r plot_data}
+dygraph(kr_port_xts, main = "Stock Returns of Kroger over 5 Years") %>% 
+  dyRangeSelector(dateWindow = c("2015-11-20", "2020-11-20")) %>% 
+  dyRoller(rollPeriod = 10) %>% 
+  dyEvent("2020-01-23", "US Stock Prices Hit by COVID-19", labelLoc = "bottom") %>%
+  dyEvent("2017-06-12", "5.7X Increase in # of Shares", labelLoc = "bottom") %>% 
+  dyRebase(value = 10000)
+
+```
+
+The first line on this plot shows where Kroger's number of shares went from 38,224,727 to 217,290,431 in just one day. This would mean that the value of each stock would dramatically decrease. This is likely the cause of the drastic drop in cumulative return on the above plot.
+
+
+```{r}
+cum2_xts["2018-04-05/"] %>% 
+  dygraph(main = "Cumulative Return on $10,000 Invested in Kroger", group = "group1") %>% 
+  dyRangeSelector() %>% 
+  dyRoller(rollPeriod = 10) %>% 
+  dyEvent("2020-01-23", "US Stock Prices Hit by COVID-19", labelLoc = "bottom") %>%
+  dyRebase(value = 10000)
+
+
+
+cum2_xts["2018-04-05/"] %>% 
+  dygraph(main = "Cumulative Return on $10,000 Invested in Kroger", group = "group1") %>% 
+  dyRangeSelector() %>% 
+  dyRoller(rollPeriod = 10) %>% 
+  dyEvent("2020-01-23", "US Stock Prices Hit by COVID-19", labelLoc = "bottom") %>%
+  dyRebase(percent = TRUE)
+
+
+```
+
+## Conclusions
+
+Using the rebase function, I set the standard on the plot to be 10000, simulating a $10,000 investment into Kroger on April 5, 2018. Though it appears that something is actually not right with my plot, because a nearly 1000% increase certainly did not occur in Mid-March 2019. I am not sure what is wrong, however, so any help would be appreciated.

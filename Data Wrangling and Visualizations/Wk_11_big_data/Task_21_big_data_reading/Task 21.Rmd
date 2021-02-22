@@ -1,0 +1,10 @@
+---
+title: "Task 21"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+## Reading Summaries
+
+I found the readings/videos to be rather informative, but yet not very helpful to actually learn anything very useful about hadoop or spark. Though I do believe it is important to have a goof understanding of the basics of each of the programs/applications to be able to implement and use them, it is really not very useful knowledge until it is put into practice. By this I mean that once we use hadoop or spark, we will be able to remember what we learned from the readings to help us in the actual usage of them.

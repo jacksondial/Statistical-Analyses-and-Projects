@@ -1,0 +1,186 @@
+---
+title: "Coding Challenge 2"
+author: "Jackson Dial"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:  
+    keep_md: true
+    toc: true
+    toc_float: true
+    code_folding: hide
+    fig_height: 6
+    fig_width: 12
+    fig_align: 'center'
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r load_libraries, include=FALSE}
+# Use this R-Chunk to load all your libraries!
+#install.packages("tidyverse") # run this line once in console to get package
+library(tidyverse)
+library(data.table)
+dat_multi <- read_csv("https://github.com/byuidatascience/data_fivethirtyeight_starwars/raw/master/survey_multiresponse_questions.csv")
+# I used this one for one plot
+dat_single <- read_csv("https://github.com/byuidatascience/data_fivethirtyeight_starwars/raw/master/survey_oneresponse_questions.csv")
+# I did not use dat_wide to make graphics (One TA did)
+dat_wide <- read_csv("https://github.com/byuidatascience/data_fivethirtyeight_starwars/raw/master/survey_wide_all.csv")
+```
+
+```{r load_data}
+has_seen_any <- dat_wide %>% 
+  filter(seen_any6 == "Yes")
+
+percentages_dat <- has_seen_any %>%
+  summarise(number = sum(`which_seen__StarWars:EpisodeIThePhantomMenace` == "Star Wars: Episode I  The Phantom Menace "))
+
+menace <- dat_wide %>% 
+  mutate(menace = case_when(
+    `which_seen__StarWars:EpisodeIThePhantomMenace` == "Star Wars: Episode I  The Phantom Menace" ~ 1,
+    TRUE ~ 0
+  )) %>% 
+  summarise(total_menace = sum(menace)) %>% 
+  mutate(perc = total_menace / 835)
+
+##
+count_function <- function(data){
+  data %>% 
+  mutate(menace = case_when(
+    `which_seen__StarWars:EpisodeIThePhantomMenace` == "Star Wars: Episode I  The Phantom Menace" ~ 1,
+    TRUE ~ 0
+  )) %>% 
+  summarise(total_menace = sum(menace))
+}
+
+count_function(dat_wide)
+
+
+##
+
+clones <- dat_wide %>% 
+  mutate(clones = case_when(
+    `which_seen__StarWars:EpisodeIIAttackoftheClones` == "Star Wars: Episode II  Attack of the Clones" ~ 1,
+    TRUE ~ 0
+  )) %>% 
+  summarise(total_clones = sum(clones)) %>% 
+  mutate(perc = total_clones / 835)
+
+##
+
+sith <-dat_wide %>% 
+  mutate(sith = case_when(
+    dat_wide$`which_seen__StarWars:EpisodeIIIRevengeoftheSith` == "Star Wars: Episode III  Revenge of the Sith" ~ 1,
+    TRUE ~ 0
+  )) %>% 
+  summarise(total_sith = sum(sith)) %>% 
+  mutate(perc = total_sith / 835)
+
+##
+
+hope <-dat_wide %>% 
+  mutate(hope = case_when(
+    dat_wide$`which_seen__StarWars:EpisodeIVANewHope` == "Star Wars: Episode IV  A New Hope" ~ 1,
+    TRUE ~ 0
+  )) %>% 
+  summarise(total_hope = sum(hope)) %>% 
+  mutate(perc = total_hope / 835)
+
+##
+
+empire <-dat_wide %>% 
+  mutate(empire = case_when(
+    dat_wide$`which_seen__StarWars:EpisodeVTheEmpireStrikesBack` == "Star Wars: Episode V The Empire Strikes Back" ~ 1,
+    TRUE ~ 0
+  )) %>% 
+  summarise(total_empire = sum(empire)) %>% 
+  mutate(perc = total_empire / 835)
+
+##
+
+
+jedi <-dat_wide %>% 
+  mutate(jedi = case_when(
+    dat_wide$`which_seen__StarWars:EpisodeVIReturnoftheJedi` == "Star Wars: Episode VI Return of the Jedi" ~ 1,
+    TRUE ~ 0
+  )) %>% 
+  summarise(total_jedi = sum(jedi)) %>% 
+  mutate(perc = total_jedi / 835)
+
+total_data = data.table(
+  ID = c("movie", "perc"),
+  movie = c("Phantom Menace", "Attack of Clones", "Revenge of Sith", "New Hope", "Empire Strikes", "Return of the Jedi"),
+  perc = c(menace$perc, clones$perc, sith$perc, hope$perc, empire$perc, jedi$perc)
+)
+total_data$movie <- factor(total_data$movie, levels = c("Return of the Jedi", "Empire Strikes", "New Hope", "Revenge of Sith" , "Attack of Clones","Phantom Menace"))
+
+total_data$perc <- as.numeric(total_data$perc)
+total_data$perc <- total_data$perc*100
+total_data$perc <- round(total_data$perc, 0)
+
+
+ggplot(total_data, aes(x = movie, y = perc))+
+  geom_bar(stat = 'identity', fill = "dodgerblue")+
+  geom_text(aes(label = perc), position = position_dodge(width = .9),hjust = -.7)+
+  coord_flip()+
+  ylim(0,95)+
+  theme(panel.grid.minor = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())+
+  labs(title = "Which 'Star Wars' Movies Have You Seen?",
+       subtitle = "Of 835 respondants who have seen any film",
+       x = "",
+       y = "")
+
+```
+
+```{r}
+seen_all <- dat_wide %>% 
+  filter(`which_seen__StarWars:EpisodeIThePhantomMenace` == "Star Wars: Episode I  The Phantom Menace" & `which_seen__StarWars:EpisodeIIAttackoftheClones` == "Star Wars: Episode II  Attack of the Clones" & `which_seen__StarWars:EpisodeIIIRevengeoftheSith` == "Star Wars: Episode III  Revenge of the Sith" & `which_seen__StarWars:EpisodeIVANewHope` == "Star Wars: Episode IV  A New Hope" & `which_seen__StarWars:EpisodeVTheEmpireStrikesBack` == "Star Wars: Episode V The Empire Strikes Back" & `which_seen__StarWars:EpisodeVIReturnoftheJedi` == "Star Wars: Episode VI Return of the Jedi")
+
+seen_all$`rank_1f6w__StarWars:EpisodeIThePhantomMenace` <- factor(seen_all$`rank_1f6w__StarWars:EpisodeIThePhantomMenace`)
+menace_1 <- table(seen_all$`rank_1f6w__StarWars:EpisodeIThePhantomMenace`)[1]
+
+##
+seen_all$`rank_1f6w__StarWars:EpisodeIIAttackoftheClones` <- factor(seen_all$`rank_1f6w__StarWars:EpisodeIIAttackoftheClones`)
+clones_1 <- table(seen_all$`rank_1f6w__StarWars:EpisodeIIAttackoftheClones`)[1]
+##
+seen_all$`rank_1f6w__StarWars:EpisodeIIIRevengeoftheSith` <- factor(seen_all$`rank_1f6w__StarWars:EpisodeIIIRevengeoftheSith`)
+sith_1 <- table(seen_all$`rank_1f6w__StarWars:EpisodeIIIRevengeoftheSith`)[1]
+##
+seen_all$`rank_1f6w__StarWars:EpisodeIVANewHope` <- factor(seen_all$`rank_1f6w__StarWars:EpisodeIVANewHope`)
+hope_1 <- table(seen_all$`rank_1f6w__StarWars:EpisodeIVANewHope`)[1]
+##
+seen_all$`rank_1f6w__StarWars:EpisodeVTheEmpireStrikesBack`<- factor(seen_all$`rank_1f6w__StarWars:EpisodeVTheEmpireStrikesBack`)
+empire_1 <- table(seen_all$`rank_1f6w__StarWars:EpisodeVTheEmpireStrikesBack`)[1]
+##
+seen_all$`rank_1f6w__StarWars:EpisodeVIReturnoftheJedi` <- factor(seen_all$`rank_1f6w__StarWars:EpisodeVIReturnoftheJedi`)
+jedi_1 <- table(seen_all$`rank_1f6w__StarWars:EpisodeVIReturnoftheJedi`)[1]
+
+best_data = data.table(
+  movie = c("Phantom Menace", "Attack of Clones", "Revenge of Sith", "New Hope", "Empire Strikes", "Return of the Jedi"),
+  num_faves = c(menace_1, clones_1, sith_1, hope_1, empire_1, jedi_1)
+) %>% 
+  mutate(perc = round((num_faves / 471)*100))
+
+best_data$movie <- factor(best_data$movie, levels = c("Return of the Jedi", "Empire Strikes", "New Hope", "Revenge of Sith" , "Attack of Clones","Phantom Menace"))
+
+
+ggplot(best_data, aes(x = movie, y = perc))+
+  geom_bar(stat = 'identity', fill = "dodgerblue")+
+  geom_text(aes(label = perc), position = position_dodge(width = .9),hjust = -.7)+
+  coord_flip()+
+  ylim(0,40)+
+  theme(panel.grid.minor = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank())+
+  labs(title = "What's the Best 'Star Wars' Movie?",
+       subtitle = "Of 471 respondents who have seen all six films",
+       x = "",
+       y = "")
+
+```
+

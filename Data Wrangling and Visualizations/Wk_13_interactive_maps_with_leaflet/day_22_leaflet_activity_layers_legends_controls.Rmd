@@ -1,0 +1,174 @@
+---
+title: "Day 22 Class Activity: Layers, Legends, and Controls. Oh My!"
+author: "YOUR NAME"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:  
+    keep_md: true
+    toc: true
+    toc_float: true
+    code_folding: hide
+    fig_height: 6
+    fig_width: 12
+    fig_align: 'center'
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r load_libraries, include=FALSE}
+# Use this R-Chunk to load all your libraries!
+#install.packages("tidyverse") # run this line once in console to get package
+library(tidyverse)
+library(USAboundaries)
+library(sf)
+library(leaflet)
+
+```
+
+```{r load_data}
+# Use this R-Chunk to import all your datasets!
+#covid now contains the cumulative confirmed case count by county for every day since the start of the pandemic
+covid <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv")
+
+
+#These two files read in sf objects that contain the geometry of the counties and states respectively
+counties <- USAboundaries::us_counties() %>%  
+  filter(name != "Alaska" & name != "Hawaii" & name != "Puerto Rico")
+state48 <- USAboundaries::us_states() %>%  
+  filter(name != "Alaska" & name != "Hawaii" & name != "Puerto Rico")
+
+
+```
+
+Our goal is to create a choropleth of the confirmed cases by state. We would like to use layers to show the progression over time. So we will have a different layer for each point in time. Specifically, we will want 4 layers, one for June 1st, August 1st, October 1st, and December 1st. 
+
+We will also want to add a layer that allows us to toggle on/off plotting of county borders.
+
+
+Take 5-10 minutes with your group and write pseudo code of how you would do this. In other words, identify what major data wrangling steps are going to need to take place in order for this to work.
+
+## Data Wrangling
+
+Step through each data verb/line of code to understand what it is doing and why.
+Fill in the blanks so that the code will run correctly.
+
+```{r}
+covid_states_long <- covid %>% filter(Province_State %in% state.name) %>% 
+  select(Province_State, `12/1/20`, `6/1/20`, `8/1/20`, `10/1/20`) %>% 
+  group_by(Province_State) %>% 
+  summarise(Dec = sum(`12/1/20`),
+            Jun = sum(`6/1/20`),
+            Aug = sum(`8/1/20`),
+            Oct = sum(`10/1/20`)) %>% 
+  pivot_longer(cols = c(Dec, Jun, Aug, Oct), values_to = "cases", names_to = "when")
+```
+
+Note the use of pivot_longer() above. The data needs to be in long form in order for the layering to work easily
+
+The goal of this next line of code is to get the state boundaries geometry contained in `state48` into the same data set as the long-form covid data.
+
+```{r}
+covid_lay_long <- left_join(covid_states_long, state48, by = c("Province_State" = "name"))
+```
+
+Our dataset is ready for plotting. We will now set the stage/prepare/define the colors in be used in the choropleth. Ensure your understand each piece of the code and fill in the blanks so that it runs correctly.
+
+```{r}
+#Create a color palette to assign colors to the various values
+pal <- colorNumeric(palette = c("white", "orange", "red"),
+                    domain = min(covid_lay_long$cases):max(covid_lay_long$cases))
+```
+
+We will now create the plot and add a control box to allow the viewer to control which layer they want to see.
+
+```{r}
+leaflet() %>% 
+  setView(lng = -99, lat = 40, zoom = 4) %>% 
+  addProviderTiles(providers$Esri.NatGeoWorldMap) %>%
+  
+  addPolygons(data = st_as_sf(filter(covid_lay_long, when=="Jun")),
+              group = "Jun",
+              fillOpacity = .5,
+              fillColor = ~pal(cases)) %>% 
+  addPolygons(data = st_as_sf(filter(covid_lay_long, when == "Aug")),
+              group = "Aug",
+              fillOpacity = .5,
+              fillColor = ~pal(cases)) %>% 
+  addPolygons(data = st_as_sf(filter(covid_lay_long, when == "Oct")),
+              group = "Oct",
+              fillOpacity = .5,
+              fillColor = ~pal(cases)) %>% 
+  addPolygons(data = st_as_sf(filter(covid_lay_long, when == "Dec")),
+              group = "Dec",
+              fillOpacity = .5,
+              fillColor = ~pal(cases)) %>% 
+  addLayersControl(
+    baseGroups = c("Jun", "Aug", "Oct", "Dec"),
+    options = layersControlOptions(collapsed = FALSE)) 
+```
+
+After getting the above code running by filling in the blanks. Answer these questions:
+
+-   What does `st_as_sf()` do, and why is it necessary?
+
+It converts the datafile to an sf object  to be used in a funciton where an sf object is required.
+
+-   What happens in you change the `collapsed = FALSE` argument to true?
+
+It changes the selection menu to be toggled on/off
+
+## Adding toggle on/off layer(s)
+
+Now we want to add the option to toggle on/off a layer of county borders.
+
+```{r}
+myleaflet <- leaflet() %>% 
+  setView(lng = -99, lat = 40, zoom = 4) %>% 
+  addProviderTiles(providers$Esri.NatGeoWorldMap) %>%
+  
+  addPolygons(data = st_as_sf(filter(covid_lay_long, when=="Jun")),
+              group = "Jun",
+              fillOpacity = .5,
+              fillColor = ~pal(cases)) %>% 
+  addPolygons(data = st_as_sf(filter(covid_lay_long, when == "Aug")),
+              group = "Aug",
+              fillOpacity = .5,
+              fillColor = ~pal(cases)) %>% 
+  addPolygons(data = st_as_sf(filter(covid_lay_long, when == "Oct")),
+              group = "Oct",
+              fillOpacity = .5,
+              fillColor = ~pal(cases)) %>% 
+  addPolygons(data = st_as_sf(filter(covid_lay_long, when == "Dec")),
+              group = "Dec",
+              fillOpacity = .5,
+              fillColor = ~pal(cases)) %>% 
+  addPolygons(data = counties, weight = 1,
+              group = "counties",
+              fill = FALSE, 
+              color = "black") %>% 
+  addLayersControl(
+    baseGroups = c("Jun", "Aug", "Oct", "Dec"),
+    overlayGroups = "counties",
+    options = layersControlOptions(collapsed = FALSE))
+
+myleaflet
+```
+
+Think about it. If you wanted to add another layer to toggle on/off  (say for example, state capitals), do you know how to do it? Describe the necessary steps / change in code to your group.
+
+## Adding a legend
+
+We start with the above code. Fill in the blanks to add a legend that will show the meaning/scale of the color coding.
+
+```{r}
+myleaflet %>% 
+    addLegend(position = "topright", pal = pal, values = covid_lay_long$cases,
+            title = "Cumulative Confirmed Covid Cases",
+            #labFormat = labelFormat(suffix = "%"),
+            opacity = 1)
+```
+

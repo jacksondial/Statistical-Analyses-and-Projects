@@ -1,0 +1,179 @@
+---
+title: "Leaflet Day 1: COVID Class Activity"
+author: "YOUR NAME"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:  
+    keep_md: true
+    toc: true
+    toc_float: true
+    code_folding: hide
+    fig_height: 6
+    fig_width: 12
+    fig_align: 'center'
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r load_libraries, include=FALSE}
+# Use this R-Chunk to load all your libraries!
+#install.packages("tidyverse") # run this line once in console to get package
+library(USAboundaries)
+library(tidyverse)
+library(leaflet)
+```
+
+Practice Using Leaflet for Interactive Maps 
+
+- We will use leaflet to create interactive maps of the cumulative confirmed cases of COVID-19.
+- First, we will plot the cities with the most confirmed cases.
+
+Note, rather than doing copying and pasting, you may learn more by actually typing things out. This will force your mind to actually read over and digest the syntax.
+
+Read in the COVID data. Replace the stars with yesterday's date m/d/y. This will give us a column called "confirmed" that contains the cumulative confirmed cases up to that date. 
+
+```{r load_data}
+# Use this R-Chunk to import all your datasets!
+covid <- read_csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv") %>% 
+  rename(confirmed = `12/7/20`)
+```
+
+## Plotting the Top Cities
+
+We will plot just the top n cities by replacing the __ in top_n(). You get to decide how many cities to plot. (I'd recommend somewhere between 20 and 100). The code in the next chunk selects just those cities.
+
+Don't forget to fill in the other blank in the code below.
+
+```{r tidy_data}
+# Use this R-Chunk to clean & wrangle your data!
+covid_top_cities<- covid %>% arrange(desc(confirmed)) %>% top_n(50) %>% select(confirmed, everything())
+```
+
+
+Now create a plot with a marker placed in the location of each of the top cities.
+Note the use of the ~ in order to reference a column name.
+
+```{r}
+leaflet(data=covid_top_cities) %>% addTiles() %>% 
+  addMarkers(lng = ~Long_, lat = ~Lat)
+```
+
+Consider the next chunk of code where we set some defaults for the map. What is this setView() doing and what values should you put in the blanks?
+
+```{r}
+leaflet(data=covid_top_cities) %>% addTiles() %>% 
+  setView(lng = -99, lat = 40, zoom = 4) %>% 
+  addMarkers(lng = ~Long_, lat = ~Lat)
+```
+
+Let's add labels to the markers so we know the name of the city and the cumulative # of confirmed cases. In addition to blanks, this code has 3 errors in it. One will prevent the code from running, the others are just mistake. Can you find and correct them?
+
+```{r plot_data}
+# Use this R-Chunk to plot & visualize your data!
+leaflet(data=covid_top_cities) %>% addTiles() %>% 
+  setView(lng = -99, lat = 40, zoom = 4) %>%  
+  addMarkers(lng = ~Long_, lat = ~Lat, label = ~paste(Admin2 , "=", confirmed))
+
+#Create ranking of top cities
+covid_top_cities<- covid %>% arrange(desc(confirmed)) %>% top_n(50)  %>% mutate(rank = 1:50) %>% select(confirmed,rank, everything())
+
+
+```
+
+## Circles on the map
+
+Instead of markers we would like to use circles on the map. Let's encode the number of cases into the size of the circles.
+
+```{r}
+leaflet(data=covid_top_cities) %>% addTiles() %>% 
+  setView(lng = -99, lat = 40, zoom = 4) %>% 
+  addCircles(lng = ~Long_, lat = ~Lat, 
+        radius = ~confirmed,
+        label = ~paste(Admin2, confirmed, sep = "="))
+```
+
+
+In addition to circle size, we will encode the cumulative confirmed case count into the color of the circle. This is not as simple and straight forward as one would like. If you reach this point, come back to the main room to visit this site together: https://rstudio.github.io/leaflet/colors.html
+
+First the set-up
+```{r}
+pal<-colorNumeric(palette = c("yellow", "red"), domain = (covid_top_cities$confirmed))
+
+pal #this is to see what pal contains/is
+```
+
+Take the time to answer the following questions about the above line of code:
+
+- What is the domain argument providing? What is it used for?
+- Why are we taking the log do you think (try the plot without logging it first)
+- What is pal?
+
+Now to actually create the plot. Can you find the 2 errors?
+
+```{r}
+leaflet(data=covid_top_cities) %>% addTiles() %>% 
+  setView(lng = -99, lat = 40, zoom = 4) %>% 
+  addCircles(lng = ~Long_, lat = ~Lat, 
+             radius = ~confirmed,
+             label = ~paste0(Admin2," County = ", confirmed , " confirmed cases"), 
+             fillOpacity = .1,
+             color = ~pal((confirmed)),  #color is the border color
+             fillColor =  ~pal((confirmed))) #notice the domain above must match exactly what is fed to pal
+```
+
+
+## Big Data and Spatial Data
+
+Pause to read the following article: Spatial Data Often Becomes Big Data
+https://blogs.esri.com/esri/arcgis/2017/10/17/strategies-to-effectively-display-large-amounts-of-data-in-web-apps/
+
+Identify the 4 stratagies for displaying map data. Consider recording them in your Readme.md
+
+1. 
+2. 
+3. 
+4. 
+
+## Clustered markers and layers
+
+Let's try clustered markers of the observations. This approach will allow us to include all the cities, not just the top ones.
+
+Quickly scan the "Markers" section of the leaflet guide https://rstudio.github.io/leaflet/markers.html
+to find the code you will need to fill in the blanks in the next R chunk.
+```{r}
+leaflet() %>% addTiles() %>% 
+  addMarkers(data = covid,
+             lng = ~Long_,
+             lat = ~Lat,
+             label = ~paste(Admin2, confirmed, sep = "="),
+             clusterOptions = markerClusterOptions())
+```
+
+The clustering isn't my favorite because it doesn't follow geopolitical boundaries. At the very least, let's plot those boundaries. 
+
+```{r}
+#First get the sf files that contain the boundaries
+library(sf)
+counties <- USAboundaries::us_counties() %>%  
+  filter(name != "Alaska" & name != "Hawaii" & name != "Puerto Rico")
+state48 <- USAboundaries::us_states() %>%  
+  filter(name != "Alaska" & name != "Hawaii" & name != "Puerto Rico")
+
+#Now use the data to create the plot
+leaflet() %>% addTiles() %>% 
+  addPolygons(data = counties, fill = FALSE, weight = 1, color = "blue") %>%
+  addPolygons(data = state48, fill = FALSE, weight = 2, color = "black") %>% 
+  addMarkers(data = covid,
+             clusterOptions =  markerClusterOptions(),
+             lng = ~Long_,
+             lat = ~Lat,
+             label = ~paste(Admin2, confirmed, sep = "="))
+
+```
+
+
+Time permitting, read through the [Leaflet guide](https://rstudio.github.io/leaflet/) and find 1-2 additional map features you would like to play with.

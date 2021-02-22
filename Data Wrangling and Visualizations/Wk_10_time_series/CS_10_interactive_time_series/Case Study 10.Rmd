@@ -1,0 +1,99 @@
+---
+title: "Interaction with time"
+author: "Jackson Dial"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:  
+    keep_md: true
+    toc: true
+    toc_float: true
+    code_folding: hide
+    fig_height: 6
+    fig_width: 12
+    fig_align: 'center'
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r load_libraries, include=FALSE}
+# Use this R-Chunk to load all your libraries!
+#install.packages("tidyverse") # run this line once in console to get package
+library(tidyverse)
+library(timetk)
+library(tidyquant)
+library(dygraphs)
+library(directlabels)
+```
+
+```{r load_data}
+# Use this R-Chunk to import all your datasets!
+
+```
+
+## Background
+
+_Your data science income has ballooned, and you need to find somewhere to invest $25,000 that you have saved over the last year. You have a savvy investment friend that is kind enough to tell you ten stocks he has been watching during the last year. You will need to visualize the last five years performance to help in the conversation with your friend._
+
+_Your friend is going to give you his tickers at the beginning of your half-hour meeting with him (he is a busy friend). You will need to build an .Rmd file that will build a suite of visualizations rapidly for your conversation. You will need a series of stock performance graphics using library(dygraphs) and library(ggplot2). In real life, you might use one or the other, but this task is built to help you move from ts and xts to tidy objects for visualization._
+
+_Specifically, in class the Tuesday following this case study you will get 5 - 10 ticker symbols and will need to build visualizations quickly that allows you to answer questions about the stocks in a few seconds._
+
+## Data Wrangling
+
+```{r tidy_data}
+tickers_today <- c("CXW", "F", "GM", "JCP", "KR", "WDC", "NKE","T", "WDAY", "WFC", "WMT")
+
+prices <- tq_get(tickers_today,
+                 get = "stock.prices",
+                 from = "2015-11-21")
+
+prices2 <- prices %>% 
+  pivot_wider(
+    names_from = symbol,
+    values_from = open,
+    id_cols = date
+  )
+
+prices2_xts <- prices2 %>% timetk::tk_xts(date = date)
+
+```
+
+## Data Visualization
+
+```{r plot_data}
+dygraph(data = prices2_xts, main = "10 Recommended Stocks (JCP not included)") %>% 
+  dyHighlight(highlightCircleSize = 5,
+              highlightSeriesBackgroundAlpha = .2,
+              hideOnMouseOut = FALSE)
+
+prices3 <- prices %>% 
+  mutate(date = ceiling_date(date, unit = "month")) %>% 
+  group_by(symbol, date) 
+#%>% 
+#  summarise(price = mean(adjusted))
+
+#ggplot(prices3, aes(x = date, y = volume, color = symbol))+
+#  geom_point()+
+
+#  labs(x = "Date",
+#       y = "Stock Price per Share (US Dollars)",
+#       color = "Ticker Symbol")+
+#  theme_bw()+
+#  geom_dl(aes(label = symbol), method = list("last.points", rot=30))
+
+ggplot(prices3, aes(x = adjusted, y = volume))+
+  geom_point(aes(color = symbol))+
+  facet_wrap(vars(symbol), ncol = 5)+
+  theme_bw()+
+  theme(panel.grid.minor = element_blank())
+```
+
+## Conclusions
+
+If I were to choose 3 stocks to invest in right now, it would hands down be WDAY, WMT, and NKE. They all have increased their share worth by sizable amounts over the past year or so, and have also had steady growth throughout the 5 year time period that is described in the plotting window.
+
+The second plot shows how the companies that had larger volumes of stocks also had greater increase of value per stock. This plot solidifies the recommendation based off of the first plot. If you want your stock to be able to grow and increase, it should not have a lot (relatively) of volume.

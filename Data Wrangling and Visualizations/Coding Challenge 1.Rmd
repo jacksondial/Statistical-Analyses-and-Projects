@@ -1,0 +1,176 @@
+---
+title: "Coding Challenge 1"
+author: "Jackson Dial"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:  
+    keep_md: true
+    toc: true
+    toc_float: true
+    code_folding: hide
+    fig_height: 6
+    fig_width: 12
+    fig_align: 'center'
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r load_libraries, include=FALSE}
+# Use this R-Chunk to load all your libraries!
+#install.packages("tidyverse") # run this line once in console to get package
+library(tidyverse)
+library(readxl)
+library(downloader)
+```
+
+```{r load_data}
+temp1 <- tempfile()
+download('https://byuistats.github.io/M335/data/cpi_food_uk/cpiaverageprices201910.xlsx',
+         temp1, mode = "wb")
+d1 <- readxl::read_xlsx(temp1)
+
+##
+
+temp2 <- tempfile()
+download('https://byuistats.github.io/M335/data/cpi_food_uk/cpiaverageprices201911.xlsx',
+         temp2, mode = "wb")
+d2 <- readxl::read_xlsx(temp2)
+
+##
+
+temp3 <- tempfile()
+download('https://byuistats.github.io/M335/data/cpi_food_uk/cpiaverageprices201912.xlsx',
+         temp3, mode = "wb")
+d3 <- readxl::read_xlsx(temp3)
+
+##
+
+temp4 <- tempfile()
+download('https://byuistats.github.io/M335/data/cpi_food_uk/cpiaverageprices202001.xlsx',
+         temp4, mode = "wb")
+d4 <- readxl::read_xlsx(temp4)
+
+##
+
+temp5 <- tempfile()
+download('https://byuistats.github.io/M335/data/cpi_food_uk/cpiaverageprices202002.xlsx',
+         temp5, mode = "wb")
+d5 <- readxl::read_xlsx(temp5)
+
+##
+
+temp6 <- tempfile()
+download('https://byuistats.github.io/M335/data/cpi_food_uk/cpiaverageprices202003.xlsx',
+         temp6, mode = "wb")
+d6 <- readxl::read_xlsx(temp6)
+ 
+
+d1a <- d1[-c(1), ]
+d2a <- d2[-c(1), ]
+d3a <- d3[-c(1), ]
+d4a <- d4[-c(1), ]
+d5a <- d5[-c(1), ]
+d5a1 <- d5a[-c(1), ]
+d6a <- d6[-c(1), ]
+d6a1 <- d6a[-c(1), ]
+
+d1b <- d1a %>% 
+  mutate(avg_price = mean(...3)) %>% 
+  mutate(month = "October") %>% 
+  select(avg_price, month)
+
+d2b <- d2a %>% 
+  mutate(avg_price = mean(...3)) %>% 
+  mutate(month = "November")%>% 
+  select(avg_price, month)
+
+d3b <- d3a %>% 
+  mutate(avg_price = mean(...3)) %>% 
+  mutate(month = "December")%>% 
+  select(avg_price, month)
+
+d4b <- d4a %>% 
+  mutate(avg_price = mean(...3)) %>% 
+  mutate(month = "January")%>% 
+  select(avg_price, month)
+
+d5b <- d5a1 %>% 
+  mutate(avg_price = mean(...2)) %>% 
+  mutate(month = "February")%>% 
+  select(avg_price, month)
+
+d6b <- d6a1 %>% 
+  mutate(avg_price = mean(...2)) %>% 
+  mutate(month = "March")%>% 
+  select(avg_price, month)
+
+alld <- bind_rows(d1b, d2b, d3b, d4b, d5b, d6b)
+
+alld$month <- factor(alld$month, levels = c("October", "November", "December", "January", "February", "March"))
+  
+
+alld1 <- alld[c(1,152,303,454,605,758),c(1:2)] %>% 
+  mutate(num_month = case_when(
+    month == "October" ~ 1,
+    month == "November" ~ 2,
+    month == "December" ~ 3,
+    month == "January" ~ 4,
+    month == "February" ~ 5,
+    month == "March" ~ 6
+  ))
+
+
+ggplot(alld1, aes(x = as.factor(month), y = avg_price))+
+  geom_point()+
+  geom_line(aes(x = num_month, color = "red"), linetype = 2)+
+  theme(legend.position = "none",
+        panel.grid.minor.y = element_blank())+
+  labs(x = "Time Period", 
+       y = "Average Price",
+        title = "CPI food price averages")+
+  ylim(2.2413,2.32)
+
+
+```
+
+```{r}
+alld2 <- alld1 %>% 
+  mutate(num_items = case_when(
+    month == "October" ~ 151,
+    month == "November" ~ 151,
+    month == "December" ~ 151,
+    month == "January" ~ 151,
+    month == "February" ~ 154,
+    month == "March" ~ 154
+  ))
+ggplot(alld2, aes(x = as.factor(month), y = num_items))+
+  geom_point()
+
+join_table <- left_join(d4a, d5a1, by = c("...2" = "CPI Average Prices 2020"))
+```
+
+```{r}
+change_table <- join_table %>% 
+  mutate(difference = ...3 - ...2.y)
+```
+
+```{r}
+change2 <- change_table %>% 
+  filter(difference > 0.6 | difference < -.32)
+change3<- change2 %>% 
+  mutate(Product = change2$...2)
+
+```
+
+```{r}
+ggplot(change3, aes(x = as.factor(Product), y = difference))+
+  geom_point()+
+  theme(axis.text.x = element_text(angle = 45))+
+  labs(y = "Change in price form January to February ",
+       title = "Top five increasing and decreasing product prices")
+```
+

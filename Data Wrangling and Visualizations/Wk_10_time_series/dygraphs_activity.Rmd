@@ -1,0 +1,209 @@
+---
+title: "Interactive Graph Class Activity"
+author: "Jackson Dial"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:  
+    keep_md: true
+    toc: true
+    toc_float: true
+    code_folding: hide
+    fig_align: 'center'
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, error = TRUE)
+```
+
+```{r load_libraries, include=FALSE}
+# Use this R-Chunk to load all your libraries!
+#You may need to install these packages if you haven't yet
+
+pacman::p_load(tidyverse,lubridate,dygraphs,timetk)
+
+
+library(tidyverse)
+library(lubridate)
+library(dygraphs)
+library(timetk)
+```
+
+Our World in Data provides daily updates to their COVID-19 dataset. It contains common metrics for cases, deaths, tests and other variables. We will use that data to create interactive time series charts.
+
+```{r load_data}
+# Use this R-Chunk to import all your datasets!
+all<-read_csv("https://covid.ourworldindata.org/data/owid-covid-data.csv")
+
+#Take a minute to get familiar with the data and the variables
+```
+
+## Problem Description: Start with the End in Mind
+
+Let's say we want to visualize the number of new cases per million people for two countries with an interactive chart using dygraphs. It is helpful to know the format dygraphs needs the data in. Unfortunately, it is not in a tidy format ! :(
+
+dygraphs require an xts object as input. Each series on the graph (i.e. each unique line), should be stored in a separate column. The dates are the "index" (kind of like a row name). 
+
+So to show the new cases per million people for two separate countries, I'll need 2 columns. 
+Question: is it okay to have additional column in the xts object I feed to dygraphs?
+
+## Data Wrangling
+
+```{r tidy_data}
+# Use this R-Chunk to clean & wrangle your data!
+
+two_country <- all %>% filter(iso_code == "USA" |
+                 iso_code == "GBR") %>% 
+  pivot_wider(names_from = iso_code, 
+              values_from = new_cases_per_million,
+              id_cols = date)
+  
+#What class of object is two_country currently?
+
+class(two_country)  
+  
+#Now that we have the dataset in the format dygraphs needs, we will convert it to an xts time series object
+
+myxts <- two_country %>% 
+  timetk::tk_xts(date = date)
+  
+#Can we find the maximum new cases per million for the U.S.?
+#myxts %>% 
+#  summarise(peak = max(USA)) This does not work because tidyverse doesn't work with xts
+
+max(myxts$USA)
+
+```
+
+## Data Visualization Together
+
+We'll use this link to learn how to use the dygraphs package.
+http://rstudio.github.io/dygraphs/index.html
+
+```{r plot_data}
+#Let's plot the series with an interactive date range selector
+
+dygraph(data = myxts, main = "New Cases per Million People in UK and USA") %>% 
+  dyRangeSelector(dateWindow = c("2020-03-01", "2020-11-18"))
+
+
+```
+
+## Data Visualization in Groups
+
+(Don't bother knitting yet, just run the code in the console. We will knit at the end of class)
+
+Use the code in the R chunk above and add to it in the next chunk. Specifically, add dynamic highlighting, so the series you hover over is given more visual emphasis.Play with some of the options and customize it to the way you like it.
+
+```{r highlights}
+dygraph(data = myxts, main = "New Cases per Million People in UK and USA") %>% 
+  dyRangeSelector(dateWindow = c("2020-03-01", "2020-11-18")) %>% 
+  dyHighlight(highlightCircleSize = 3,
+              highlightSeriesBackgroundAlpha = .3,
+              hideOnMouseOut = FALSE)
+
+```
+
+Use the code in the R chunk above and add to it in the next chunk. 
+
+Specifically, refer to the "Annotation/Shading" and the "Events and Limits" sections to learn how to call out the following dates. Push yourself by calling out each date on the chart in a different way/format.
+* March 11, 2020 the WHO declares and worldwide pandemic. (WHO stands for World Health Organization)
+* April 14, 2020 President Trump announces the USA will no longer contribute funding to the WHO
+* March 25, 2020 - April 30, 2020 Governor Little's "Stay At Home Order" is in affect for all of Idaho.
+
+  
+```{r callouts}
+dygraph(data = myxts, main = "New Cases per Million People in UK and USA") %>% 
+  dyRangeSelector(dateWindow = c("2020-03-01", "2020-11-18")) %>% 
+  dyHighlight(highlightCircleSize = 3,
+              highlightSeriesBackgroundAlpha = .3,
+              hideOnMouseOut = FALSE) %>% 
+  dyAnnotation("2020-03-11", tooltip = "WHO declares Worldwide Pandemic", text = "A") %>% 
+  dyAnnotation("2020-04-14", text = "C", tooltip = "President Trump announces the US will no longer provide funding to the WHO") %>% 
+  dyAnnotation("2020-03-25", text = "B", tooltip = "Idaho Governor Issues 'Stay at Home Order'") %>% 
+  dyEvent("2020-03-11", "WHO Pandemic", labelLoc = "top") %>% 
+  dyEvent("2020-04-14", "US Funding to WHO withdrawn") %>% 
+  dyEvent("2020-03-25", "Idaho Stay at Home Order")
+```
+
+Use the code in the R chunk above and add to it in the next chunk. 
+
+The data is very jaggity/spikey, which makes it somewhat difficult to read. Read the "Roll Periods" section and replot your data using rolling averages. Play around with the period you would like as the default.
+
+```{r roller}
+dygraph(data = myxts, main = "New Cases per Million People in UK and USA") %>% 
+  dyRangeSelector(dateWindow = c("2020-03-01", "2020-11-18")) %>% 
+  dyHighlight(highlightCircleSize = 3,
+              highlightSeriesBackgroundAlpha = .3,
+              hideOnMouseOut = FALSE) %>% 
+  dyAnnotation("2020-03-11", tooltip = "WHO declares Worldwide Pandemic", text = "A") %>% 
+  dyAnnotation("2020-04-14", text = "C", tooltip = "President Trump announces the US will no longer provide funding to the WHO") %>% 
+  dyAnnotation("2020-03-25", text = "B", tooltip = "Idaho Governor Issues 'Stay at Home Order'") %>% 
+  dyEvent("2020-03-11", "WHO Pandemic", labelLoc = "top") %>% 
+  dyEvent("2020-04-14", "US Funding to WHO withdrawn") %>% 
+  dyEvent("2020-03-25", "Idaho Stay at Home Order") %>% 
+  dyRoller(rollPeriod = 5)
+
+```
+
+## Return to the main class
+
+Let's plot the series for the US and the UK on different charts, but with a linked date range selector. To do this we will need to call dygraphs twice, once for each series.
+
+Also, let's start the chart on April 1st instead of March 1st.
+
+```{r linked}
+usa_ts <- two_country %>% select(date, USA)
+gbr_ts <- two_country %>% select(date, GBR)
+
+#convert the tibble to an xts object
+usa_xts <- usa_ts %>% 
+  tk_xts(date = date)
+gbr_xts <- gbr_ts %>% 
+  tk_xts(date = date)
+##
+
+use_dates <- c("2020-03-01", as.character(today()))
+
+
+dygraph(tk_xts(usa_ts, date_var = date), group = "country") %>% 
+  dyRangeSelector(dateWindow = use_dates))
+
+
+dygraph(tk_xts(gbr_ts, date_var = date), group = "country") %>% 
+  dyRangeSelector(dateWindow = use_dates)
+```
+
+<!-- Note: you won't notice the linking by just running the above chunk in the console, we will have to knit it to test it out. -->
+
+Finally, let's talk about rebase: what's it's purpose and how does it work?
+
+Rebase uses the original data but simply re-scales it. It will take the two series and start them at the same point.
+
+Learn more at ?dyRebase()
+
+Also, let's start the plot on April 1st, since that's where it gets interesting
+
+```{r rebase}
+myxts["2020-04-01/"] %>% 
+  dygraph(main = "New Cases", group = "my example") %>% 
+  dyRangeSelector()
+
+#rebas incorporated to a specific value
+myxts["2020-04-01/"] %>% 
+  dygraph(main = "New Cases", group = "my example") %>% 
+  dyRangeSelector() %>% 
+  dyRebase(value = 1000)
+
+If i rebase by 1000
+#april 1 is 75.22 / 75.22 * 1000
+#april 2 is 81.822 / 75.22 * 1000
+#day value / initial date value * rebase value
+
+
+myxts["2020-04-01/"] %>% 
+  dygraph(main = "New Cases", group = "my example") %>% 
+  dyRangeSelector() %>% 
+  dyRebase(percent = TRUE)
+```
